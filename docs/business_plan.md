@@ -40,7 +40,7 @@ sur les données ouvertes ; les autres chiffres renvoient à leur source ([SOURC
 | Occupation | Recette par an | Résultat par an | Délai de retour de l'investissement |
 | --- | --- | --- | --- |
 | 5 % (station qui dort) | 3 509 € | -17 477 € | jamais |
-| 29 % (notre moyenne) | 20 632 € | -354 € | 5,2 ans |
+| 29 % (notre moyenne) | 20 351 € | -635 € | 5,3 ans |
 | 30 % (équilibre) | 20 986 € | 0 € | 5 ans |
 | 40 % | 28 070 € | +7 084 € | 3,1 ans |
 | 50 % | 35 088 € | +14 102 € | 2,3 ans |
@@ -56,9 +56,9 @@ par ce que la station dégage avant amortissements.
    environ 17 500 € par an de plus qu'elle ne rapporte. Le collecteur tourne déjà dans Microsoft
    Fabric : la mesure s'allonge toute seule.
 2. **Ouvrir les 23 premières stations de la liste** (46 voitures, 500 k€ par an de coût complet,
-   1,34 M€ d'investissement si les voitures sont achetées). À notre usage moyen, elles rapportent
-   475 k€ par an et s'autofinancent ; à 35 % d'usage, elles dégagent 82 k€ par an et sont
-   remboursées en 3,8 ans ; à 40 %, 163 k€ par an et 3,1 ans.
+   1,34 M€ d'investissement si les voitures sont achetées). À notre usage moyen (29 %), elles
+   rapportent 468 k€ par an, à 3 % de leur coût complet ; à 35 % d'usage, elles dégagent 82 k€
+   par an et sont remboursées en 3,8 ans ; à 40 %, 163 k€ par an et 3,1 ans.
 3. **Continuer au rythme de +20 % de stations par an**, celui que vise la Métropole, jusqu'aux 400
    voitures de 2030. L'outil se relance chaque année sur les nouvelles données.
 4. **Financer avec nos sociétaires** : 15 parts sociales de 750 € financent une voiture ; une
