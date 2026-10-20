@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "02_arrets",
+    "description": "Arrêts GTFS dédoublonnés et lignes qui s'y arrêtent : Tisséo, liO, TER"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "5f23bacd-0416-4da2-95b8-127d133c4902"
+  }
+}

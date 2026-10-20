@@ -1,0 +1,41 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/variableLibrary/definition/variables/1.0.0/schema.json",
+  "variables": [
+    {
+      "name": "zone",
+      "type": "String",
+      "value": "epcis/243100518/communes",
+      "note": "Requête geo.api.gouv.fr qui liste les communes de la zone d'étude. Défaut : Toulouse Métropole (décision 1)."
+    },
+    {
+      "name": "lakehouse",
+      "type": "String",
+      "value": "Mobilite",
+      "note": "Lakehouse où les notebooks 01, 02 et 03 écrivent les tables de la zone."
+    },
+    {
+      "name": "rayon_m",
+      "type": "Integer",
+      "value": 400,
+      "note": "Rayon des 5 minutes à pied, en mètres à vol d'oiseau (décision 4)."
+    },
+    {
+      "name": "semaines_reference",
+      "type": "Integer",
+      "value": 8,
+      "note": "Le jour de référence des fréquences est le mardi le plus chargé de ces semaines à venir."
+    },
+    {
+      "name": "fusion_homonymes_m",
+      "type": "Integer",
+      "value": 100,
+      "note": "Deux arrêts d'un même réseau, de même nom, plus proches que cette distance sont un seul arrêt."
+    },
+    {
+      "name": "retelecharger_insee",
+      "type": "Boolean",
+      "value": false,
+      "note": "Reprendre les fichiers de référence (INSEE, contours IRIS de l'IGN) sur leur site au lieu des copies gardées dans Files/brut."
+    }
+  ]
+}

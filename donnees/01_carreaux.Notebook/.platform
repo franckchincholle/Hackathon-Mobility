@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "01_carreaux",
+    "description": "Carreaux INSEE de 200 m : table de la zone et table France"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "e9e2fe09-2c46-4d0a-8488-c273720302b3"
+  }
+}

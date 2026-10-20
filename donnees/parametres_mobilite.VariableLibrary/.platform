@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "VariableLibrary",
+    "displayName": "parametres_mobilite",
+    "description": "Réglages des notebooks de données : zone d'étude, Lakehouse, rayon des 5 minutes"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "3c0b8f4e-6a1d-4f2e-9b7a-51d2e8c4a7f0"
+  }
+}
