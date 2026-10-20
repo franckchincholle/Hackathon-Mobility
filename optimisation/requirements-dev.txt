@@ -1,5 +1,7 @@
 # Dépendances du site, plus les outils de test : ./start.sh --tests
 # (ou .venv/bin/python -m pytest tests -q depuis optimisation/).
-# playwright n'est pas listé : aucun fichier du dépôt ne l'importe.
+# playwright sert aux captures du plan B (scripts/captures.py). pip n'installe pas son navigateur : le
+# script prend alors un Chromium déjà présent (CHROME_PATH, ou le cache de Playwright).
 -r requirements.txt
 pytest==9.1.1
+playwright==1.64.0
