@@ -292,7 +292,7 @@ st.title("Où installer les prochaines stations ?")
 st.markdown(f"#### {scenarios.phrase_choc(rob)}")
 c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("Stations proposées", k["nb_stations"])
-c2.metric("Coût total", euros(k["cout_total"]), f"budget {euros(montant)}", delta_color="off")
+c2.metric("Coût total", euros(k["cout_total"]), f"budget {euros(montant)}", delta_color="off", delta_arrow="off")
 c3.metric("Habitants nouvellement desservis", nombre(arrondi(k["habitants_nouveaux"])))
 c4.metric("dont sans aucun transport aujourd'hui", nombre(arrondi(k["habitants_sans_transport_nouveaux"])))
 c5.metric("Coût par habitant gagné (par an)",
@@ -311,13 +311,13 @@ if budget == "citiz" and k["nb_stations"]:
     recette_reference = k["voitures_ajoutees"] * float(rentabilite.recette_voiture(occupation_reference))
     b1, b2, b3, b4, b5 = st.columns(5)
     b1.metric("Recette prévue par an", euros(recette_reference), f"à {occupation_reference:.0%} d'usage, notre moyenne",
-              delta_color="off")
+              delta_color="off", delta_arrow="off")
     b2.metric("Rentable au-dessus de", f"{rentabilite.occupation_equilibre(scenarios.cout_station(d.couts, 'citiz', fourchette)):.0%} d'usage",
-              f"nos voitures : {occupation_reference:.0%} (mesuré)" if usage_mesure else None, delta_color="off")
+              f"nos voitures : {occupation_reference:.0%} (mesuré)" if usage_mesure else None, delta_color="off", delta_arrow="off")
     b3.metric("Investissement d'ouverture", euros(k["investissement"]), f"{k['voitures_ajoutees']} voitures",
-              delta_color="off")
-    b4.metric("Voitures personnelles en moins", entre(env["voitures_en_moins"]), "ADEME 2022", delta_color="off")
-    b5.metric("CO2 évité par an", entre(env["tonnes_co2_evitees"], " t"), "ADEME 2022", delta_color="off")
+              delta_color="off", delta_arrow="off")
+    b4.metric("Voitures personnelles en moins", entre(env["voitures_en_moins"]), "ADEME 2022", delta_color="off", delta_arrow="off")
+    b5.metric("CO2 évité par an", entre(env["tonnes_co2_evitees"], " t"), "ADEME 2022", delta_color="off", delta_arrow="off")
 
 (onglet_carte, onglet_business, onglet_impact, onglet_courbe, onglet_equite, onglet_robustesse,
  onglet_methode) = st.tabs(["Carte et liste", "Business plan", "Impact", "Budget → habitants", "Équité",
@@ -377,13 +377,18 @@ with onglet_carte:
             notes = criteres_citiz.notes_radar(cc, station.idcar_200m)
             notes["info"] = notes.note.round(0).astype(int).astype(str) + " / 100" + np.where(
                 notes.mesure, "", " (non mesuré ici)")
-            gauche.altair_chart(alt.Chart(notes).mark_bar(color="#32b4b5").encode(
+            base_notes = alt.Chart(notes).encode(
                 x=alt.X("note:Q", title="Note sur 100 (rang dans la métropole)", scale=alt.Scale(domain=[0, 100])),
-                y=alt.Y("libelle:N", title=None, sort=notes.libelle.tolist()),
+                y=alt.Y("libelle:N", title=None, sort=notes.libelle.tolist(),
+                        axis=alt.Axis(labelLimit=260, labelOverlap=False)),
                 tooltip=["libelle:N", "info:N"],
-            ).properties(height=260, title=f"Les 8 critères de Citiz · indice "
-                                           f"{cc.criteres.indice_citiz[station.idcar_200m]:.0f} / 100"),
-                width="stretch")
+            )
+            barres = base_notes.mark_bar(color="#32b4b5")
+            valeurs = base_notes.mark_text(align="left", dx=4, color="#616060").encode(
+                text=alt.Text("note:Q", format=".0f"))
+            gauche.altair_chart((barres + valeurs).properties(
+                height=320, title=f"Les 8 critères de Citiz · indice "
+                                  f"{cc.criteres.indice_citiz[station.idcar_200m]:.0f} / 100"), width="stretch")
         recette = rentabilite.VOITURES_PAR_STATION * float(rentabilite.recette_voiture(occupation_reference))
         lignes_fiche = [
             f"Habitants gagnés à 5 minutes : {nombre(arrondi(station.population_nouvelle))}",
@@ -453,7 +458,7 @@ with onglet_business:
             point_mort = next((int(a) for a, v in zip(tresorerie.annee, tresorerie.cumul) if v >= 0), None)
             p1, p2, p3, p4 = st.columns(4)
             p1.metric("Recette par an", euros(plan.recette.sum()))
-            p2.metric("Résultat par an", euros_signe(plan.resultat.sum()), "après coût complet", delta_color="off")
+            p2.metric("Résultat par an", euros_signe(plan.resultat.sum()), "après coût complet", delta_color="off", delta_arrow="off")
             p3.metric("Investissement d'ouverture", euros(len(cz) * rentabilite.INVESTISSEMENT[fourchette]))
             delai = plan.delai_ans.iat[0]
             p4.metric("Chaque station est remboursée en", f"{delai:.1f} ans".replace(".", ",") if np.isfinite(delai)
@@ -523,7 +528,7 @@ with onglet_impact:
         e1, e2, e3, e4 = st.columns(4)
         e1.metric("Voitures personnelles en moins", entre(env["voitures_en_moins"]))
         e2.metric("Voirie rendue à la ville", entre(env["m2_liberes"], " m²"),
-                  f"{entre(env['places_liberees'])} places", delta_color="off")
+                  f"{entre(env['places_liberees'])} places", delta_color="off", delta_arrow="off")
         e3.metric("Kilomètres en voiture évités", entre(env["km_evites"]))
         e4.metric("CO2 évité", entre(env["tonnes_co2_evitees"], " t"))
     st.markdown("Qui gagne une station à 5 minutes à pied :")
@@ -535,7 +540,7 @@ with onglet_impact:
     s3.metric("Vivent dans la moitié la plus modeste", f"{soc['part_sous_mediane']:.0%}"
               if np.isfinite(soc["part_sous_mediane"]) else "-",
               f"{deja['part_sous_mediane']:.0%} chez ceux qui ont déjà une Citiz" if np.isfinite(deja["part_sous_mediane"])
-              else None, delta_color="off")
+              else None, delta_color="off", delta_arrow="off")
     s4.metric("Logements sociaux", nombre(arrondi(soc["logements_sociaux"])) if np.isfinite(soc["logements_sociaux"]) else "-")
     st.caption("Moitié la plus modeste : sous le niveau de vie médian des habitants de la métropole (INSEE Filosofi). "
                "La Métropole rembourse la moitié des trajets Citiz des ménages modestes, jusqu'à 1 000 € par an "

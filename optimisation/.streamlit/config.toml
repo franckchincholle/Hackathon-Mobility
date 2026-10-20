@@ -9,3 +9,6 @@ font = "sans serif"
 
 [browser]
 gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"  # pas de bouton « Deploy » ni de menu de développeur pendant la démo
