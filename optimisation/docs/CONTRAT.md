@@ -10,11 +10,8 @@ MSc 1 :
 Les règles des décisions du kit s'appliquent telles quelles : 400 m autour du centre du carreau (décision 4)
 et une option = une ligne distincte ou une station (décision 3).
 
-Pour vérifier les données et voir ce qui est encore provisoire, depuis `optimisation/` :
-
-```bash
-python scripts/verifier_contrat.py
-```
+Les données sont vérifiées à chaque chargement (`contrat.charger_donnees`) : une table qui ne respecte pas ce
+contrat arrête le site avec un message qui dit quoi corriger, et ce qui manque est signalé à l'écran.
 
 ## 1. MSc 1 : livré, lu tel quel
 
@@ -78,14 +75,10 @@ score de l'emplacement. Une table `scores_potentiel` aux mêmes colonnes serait 
 
 Le MBA a livré **`Coût citiz.xlsx`** (dernière version le 20/10 à 15 h 05, avec la réponse de Citiz sur la
 redevance de stationnement) : coût complet d'une station Citiz de 2 voitures, par an, voitures
-amorties sur 5 ans, recettes non déduites. Pour l'importer :
-
-```bash
-python scripts/importer_couts_mba.py "/chemin/Coût citiz.xlsx"
-```
-
-Le script lit la ligne « Coût annuel complet par station (thermique ou hybride) » de l'onglet Calcul, celle
-que le classeur désigne « À DONNER À MSc 4 ».
+amorties sur 5 ans, recettes non déduites. Les classeurs du MBA sont dans `docs/couts/` à la racine du dépôt :
+`couts_mba.lire_classeur` lit la ligne « Coût annuel complet par station (thermique ou hybride) » de l'onglet
+Calcul, celle que le classeur désigne « À DONNER À MSc 4 », et `couts_mba.lire_classeur_collectivite` les lignes
+de l'arrêt de bus et de la station de 10 vélos. Le résultat est copié dans `data/reel/mba/couts.parquet`.
 
 **Table `couts`**, une ligne par type livré, en euros par station et par an :
 
@@ -99,9 +92,9 @@ Les valeurs aujourd'hui :
 
 | Type | Bas | Défaut | Haut | Source |
 | --- | ---: | ---: | ---: | --- |
-| Citiz | 12 197 € | 20 986 € | 26 664 € | **MBA** (`Coût citiz.xlsx`, version du 20/10) |
-| Vélo | 15 000 € | 22 500 € | 30 000 € | MOCK, en attente du MBA |
-| Bus | 8 000 € | 14 000 € | 20 000 € | MOCK, en attente du MBA |
+| Citiz | 12 197 € | 20 986 € | 26 664 € | MBA, `docs/couts/Cout_citiz.xlsx` (version du 20/10, avec la réponse de Citiz) |
+| Vélo | 21 133 € | 24 495 € | 30 000 € | MBA, `docs/couts/Cout_bus_velo.xlsx` (station de 10 vélos) |
+| Bus | 275 € | 548 € | 1 575 € | MBA, `docs/couts/Cout_bus_velo.xlsx` (arrêt ajouté sur une ligne existante) |
 
 Un type absent de la livraison garde sa ligne MOCK, signalée à l'écran. L'ancien format (`cout_install_*`,
 `cout_fonct_1an_*`) est encore accepté.

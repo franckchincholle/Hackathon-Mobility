@@ -2,10 +2,11 @@
 
 | Limite | Effet | Pour aller plus loin |
 | --- | --- | --- |
-| **Résultats provisoires** : accessibilité calculée en attendant MSc 2, coûts vélo et bus estimés en attendant le MBA | Le classement de la collectivité n'est pas encore chiffré sur des coûts sourcés. | Déposer leurs tables : aucun code à changer (`docs/CONTRAT.md`). |
+| **Accessibilité de MSc 2 avec ses propres règles** : seuil de 25 habitants, lignes sans passage comptées comme des options | Moins de candidats (2 929) ; un carreau près d'une ligne qui ne passe pas paraît desservi. | Filtrer les lignes sur `passages_jour > 0` dans le notebook Maps. |
+| **Recette d'une nouvelle station = usage moyen mesuré** (29 %) : 30 heures de relevés ne prédisent pas l'usage station par station | Toutes les stations proposées ont la même recette prévue ; l'onglet Business plan montre l'effet d'un usage plus haut ou plus bas. | Un mois de relevés, puis un modèle d'usage (`modele/RESULTATS.md`). |
 | **Cercle de 400 m à vol d'oiseau** (décision 4) | Ignore les coupures (Garonne, rocade, voies ferrées). | Réseau piéton OSM, prévu par MSc 2 si le temps le permet ; seule la matrice de couverture change. |
 | **Coût Citiz du MBA : coût brut, recettes non déduites** ; chiffres d'autres territoires (Genevois, Belgique) ; usure et amortissement du boîtier supposés par l'équipe | Le coût réel net pour Citiz est plus bas que celui utilisé. | Déduire les recettes par voiture (repère : 10 000 € par an en Occitanie). |
-| **Coûts vélo et bus encore MOCK** | La liste de la collectivité n'est pas encore chiffrée sur des sources. | Livraison du MBA. |
+| **Arrêt de bus à 548 € par an** (MBA : aménagement amorti sur 20 ans) | L'arrêt est de loin l'équipement le moins cher : la contrainte est l'emplacement, sur une ligne existante. | Ajouter le coût d'exploitation d'un arrêt (temps de parcours de la ligne). |
 | **Coût identique pour toutes les stations d'un type** | Ignore le foncier, le génie civil ou une place déjà existante. | Coût par emplacement : l'algorithme le gère déjà. |
 | **Budget annuel** (coût complet amorti, choix du MBA) | Ne montre pas l'effort de trésorerie de la première année (67 500 € par station Citiz par défaut). | Le classeur du MBA le donne pour le business case. |
 | **Une station = une option, sans capacité** | Une petite station Citiz « dessert » autant qu'une grande. | Capacité (`capacite` dans `stations_partagees`) en paramètre. |

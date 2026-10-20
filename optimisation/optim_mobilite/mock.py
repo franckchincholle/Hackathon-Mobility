@@ -1,8 +1,8 @@
-"""Ce qui reste MOCK : les coûts que le MBA n'a pas encore chiffrés.
+"""Les coûts MOCK : le repli si aucun coût du MBA n'est lisible.
 
-Le MBA a livré Citiz (classeur « Coût citiz.xlsx », importé par scripts/importer_couts_mba.py) ;
-le vélo et le bus restent ici, en ordres de grandeur, jusqu'à sa livraison. La ligne Citiz ne
-sert que si son classeur n'a pas été importé. Coût complet d'une station et par an.
+Le MBA a livré les trois équipements (docs/couts/, lus par couts_mba.py et copiés dans
+data/reel/mba/couts.parquet) : ces ordres de grandeur ne servent plus que si cette table manque,
+par exemple dans les tests. Coût complet d'une station et par an.
 """
 
 from pathlib import Path

@@ -1,10 +1,10 @@
 # Décisions et pourquoi (MSc 4)
 
 Chaque choix de l'optimisation, avec la raison et ce qu'on a écarté. Les chiffres viennent des **données
-réelles de MSc 1** (Toulouse Métropole, 7 070 carreaux, 739 446 habitants). Ils restent **provisoires** tant
-que manquent l'accessibilité de MSc 2 et les coûts du vélo et du bus (MBA). Le score de MSc 3 et le coût
-Citiz du MBA sont intégrés. Pour les recalculer :
-`scripts/comparer_exact.py` et l'application.
+réelles de MSc 1** (Toulouse Métropole, 7 070 carreaux, 739 446 habitants). Depuis la nuit du 20 au 21
+octobre, toutes les briques sont livrées : l'accessibilité de MSc 2, le score de MSc 3 et les coûts du MBA pour
+Citiz, le vélo et le bus. Les chiffres datés d'avant ces livraisons sont recalculés dans `docs/ORAL.md` ; pour
+les recalculer : `comparer_exact.py` (gardé en local par MSc 4) et l'application.
 
 ## 0. On suit les choix déjà faits par l'équipe
 
@@ -13,7 +13,7 @@ Citiz du MBA sont intégrés. Pour les recalculer :
 | Toulouse Métropole | décision 1, `zone_communes` de MSc 1 | elle travaille sur les 7 070 carreaux de la zone |
 | EPSG:3035, `idcar_200m` | notebooks de MSc 1 | elle calcule toutes ses distances en EPSG:3035 |
 | 400 m autour du centre du carreau | décision 4, `RAYON_M` de MSc 1 | même rayon, frontière comprise |
-| Une option = une ligne distincte ou une station vélo / Citiz | décision 3, `arrets_lignes` de MSc 1 | calcul provisoire de `nb_options` (en attendant MSc 2) |
+| Une option = une ligne distincte ou une station vélo / Citiz | décision 3, `arrets_lignes` de MSc 1 | `nb_options` de MSc 2 (`acces_carreau`) ; le calcul provisoire reste en repli |
 | Valeur = population nouvellement desservie × score | décision 7 | score de l'**emplacement**, appliqué au gain du candidat |
 | Habitants retirés après chaque choix | décisions 6 et 9 | chaque habitant ne compte qu'une fois |
 
@@ -233,9 +233,10 @@ Le budget devient donc un **budget annuel**.
 - Le classeur vérifie son chiffre avec des repères indépendants. Le coût par défaut est de 10 373 € par voiture
   et par an, dans le seuil de rentabilité indiqué par Citiz lui-même : 8 400 à 10 800 € par voiture et par an.
 
-**Ce qui reste MOCK** : le vélo et le bus, jusqu'à la livraison du MBA.
+**Ce qui reste MOCK** : plus rien depuis la livraison du classeur vélo et bus du MBA (548 € par an pour un
+arrêt de bus, 24 495 € pour une station de 10 vélos) ; les lignes MOCK ne servent qu'en repli.
 
-**Import** : `scripts/importer_couts_mba.py` lit la ligne par son libellé, pas par son numéro, pour qu'une ligne
+**Import** : `couts_mba.py` lit la ligne par son libellé, pas par son numéro, pour qu'une ligne
 ajoutée au classeur ne casse rien.
 
 ## 16. Lecture en direct sur Fabric
