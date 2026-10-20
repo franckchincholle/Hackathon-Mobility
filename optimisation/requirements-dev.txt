@@ -1,0 +1,5 @@
+# Dépendances du site, plus les outils de test : ./start.sh --tests
+# (ou .venv/bin/python -m pytest tests -q depuis optimisation/).
+# playwright n'est pas listé : aucun fichier du dépôt ne l'importe.
+-r requirements.txt
+pytest==9.1.1

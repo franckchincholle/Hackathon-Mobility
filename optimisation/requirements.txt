@@ -1,21 +1,23 @@
+# Dépendances du site, figées sur un environnement vérifié le 20/10/2026 (Python 3.12).
+# numpy, scipy et pyproj à ces versions demandent Python 3.12 ou plus.
+# Les outils de test sont dans requirements-dev.txt.
+
 # Cœur de l'optimisation (aussi utilisable dans un notebook Fabric)
-numpy>=1.26
-pandas>=2.1
-scipy>=1.11
-pyarrow>=14
-pyproj>=3.6
-# Lecture du Lakehouse de MSc 1 (scripts/telecharger_lakehouse.py)
-deltalake>=0.18
-requests>=2.31
-duckdb>=1.1  # tables Delta avec « deletion vectors » (ex. score de potentiel), que deltalake ne lit pas
-# Lecture du classeur de coûts du MBA (scripts/importer_couts_mba.py)
-openpyxl>=3.1
-pulp>=2.8,<3  # API classique (LpVariable, lpSum) ; embarque CBC
-highspy>=1.7  # HiGHS, solveur libre plus rapide que CBC, utilisé par PuLP
+numpy==2.5.4
+pandas==3.0.6
+scipy==1.18.1
+pyarrow==26.0.0
+pyproj==3.8.0
+# Lecture du Lakehouse Fabric (optim_mobilite/fabric.py, scripts/telecharger_lakehouse.py)
+deltalake==1.6.6
+requests==2.34.2
+duckdb==1.5.6  # tables Delta avec « deletion vectors » (ex. score de potentiel), que deltalake ne lit pas
+# Lecture du classeur de coûts du MBA (pandas.read_excel)
+openpyxl==3.1.5
+# Comparaison exacte (optim_mobilite/exact.py)
+pulp==2.9.0  # API classique (LpVariable, lpSum) ; embarque CBC
+highspy==1.15.1  # HiGHS, solveur libre plus rapide que CBC, utilisé par PuLP
 # Démo
-streamlit>=1.38
-pydeck>=0.9
-matplotlib>=3.8
-# Tests
-pytest>=8
-playwright>=1.48  # captures du plan B (scripts/captures.py)
+streamlit==1.66.0
+pydeck==0.9.3
+altair==6.3.0  # graphiques de l'application (app/streamlit_app.py)
