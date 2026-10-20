@@ -4,32 +4,33 @@ On choisit un budget, l'outil renvoie la carte et la liste priorisée des meille
 nouvelles stations Citiz, ou pour des stations vélo et des arrêts de bus financés par la collectivité, sur
 **Toulouse Métropole** (zone de MSc 1).
 
-> **Données en direct** : le site lit le Lakehouse Fabric `Mobilite` à chaque chargement, et le relit toutes
-> les 10 minutes ou avec le bouton « Mettre à jour les données ». Une mise à jour faite dans Fabric apparaît
-> donc sans rien relancer. Chaque lecture réussie est gardée dans `data/reel/` : si Fabric ou le réseau tombe,
-> le site repart de cette copie et le signale. Ce qui manque encore est affiché comme « provisoire »
-> (aujourd'hui : l'accessibilité, et les coûts du vélo et du bus).
+> **Deux façons de lire les données** : avec `./start.sh`, le site lit la copie locale du Lakehouse Fabric
+> `Mobilite`, faite juste avant (affichage immédiat, rien ne dépend du réseau pendant la démo) ; avec
+> `./start.sh --direct`, il lit le Lakehouse en direct et le relit toutes les 10 minutes ou avec le bouton
+> « Mettre à jour les données ». Si Fabric ou le réseau tombe, le site repart de la copie et le signale.
+> Toutes les briques de l'équipe sont livrées : plus rien n'est affiché comme « provisoire ».
 
 ## Lancer
 
-Depuis le dossier `optimisation/`, avec `az login` fait sur le tenant Epitech :
+Le plus simple : `./start.sh` à la racine du dépôt (voir le [README racine](../README.md)). À la main, depuis
+`optimisation/`, avec `az login` fait sur le tenant Epitech :
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # une fois
-az login --tenant 901cb4ca-b862-4029-9306-e5cd0f6d9f86 --allow-no-subscriptions   # accès à Fabric
-.venv/bin/streamlit run app/streamlit_app.py                          # la démo, sur http://localhost:8501
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt   # une fois
+.venv/bin/python scripts/telecharger_lakehouse.py                        # copie des tables de Fabric
+OPTIM_SOURCE=local .venv/bin/streamlit run app/streamlit_app.py           # la démo, sur http://localhost:8501
 ```
 
-Tests (sans réseau) : `.venv/bin/python -m pytest tests -q` (110 tests).
+Tests (sans réseau) : `.venv/bin/python -m pytest tests -q` (132 tests), ou `./start.sh --tests`.
 
 **Ce que le dépôt contient** : le site (`app/`, `optim_mobilite/`, `config.toml`, `.streamlit/`), sa documentation
-(`docs/`) et ses tests (`tests/`). Le coût d'une station Citiz, importé du classeur Excel, est dans
-`data/reel/mba/couts.parquet` ; les coûts estimés du vélo et du bus sont dans `data/mock/`.
+(`docs/`), ses tests (`tests/`) et la copie des tables (`scripts/telecharger_lakehouse.py`). Les coûts des trois
+équipements, importés des classeurs du MBA (`../docs/couts/`), sont dans `data/reel/mba/couts.parquet`. Les
+captures du plan B sont dans `../presentation/captures/`.
 
 **Ce qui n'y est pas** :
 
-- les outils de préparation (copie de secours du Lakehouse, import du classeur de coûts, comparaison exacte,
-  export Power BI, captures du plan B), gardés en local ;
+- la comparaison exacte et l'export Power BI, gardés en local ;
 - le notebook, publié directement dans Fabric : **`optimisation_fabric`**, dans l'espace « Hackathon Mobi ». Il
   lit le même module, copié dans `Files/optimisation/` du Lakehouse `Mobilite`.
 
@@ -46,8 +47,12 @@ Tout est lu dans le Lakehouse `Mobilite`, en lecture seule (`optim_mobilite/fabr
 | Tracés des lignes de bus Tisséo | `Files/brut/gtfs/<jour le plus récent>/tisseo.zip` | livré |
 | IRIS de chaque carreau | `carreaux_variables`, `iris` | livré |
 | Score de potentiel | `scores_potentiel_msc3` | livré |
-| Accessibilité, seuil, cartes d'analyse | `accessibilite`, `population_servie` | provisoire en attendant |
-| Coûts | table `couts`, ou classeur Excel déposé dans `Files/mba/` | Citiz : classeur importé en local ; vélo et bus : estimés |
+| Raisons du score (modèle v2) | `scores_potentiel_v2` | livré |
+| Accessibilité, seuil, carte de chaleur | `acces_carreau` (MSc 2 ; `accessibilite` si elle existe) | livré |
+| Population servie par station | `population_servie` | pas livrée : calque désactivé |
+| Coûts | table `couts`, sinon `data/reel/mba/couts.parquet` (classeurs du MBA) | livré |
+| 8 critères de Citiz, places proposées, arbres | `criteres_citiz`, `places_candidates`, `arbres` (notebook 08) | livré |
+| Usage mesuré des stations Citiz | `usage_stations` (relevés de `citiz_releves`) | livré |
 
 Le détail des colonnes est dans [`docs/CONTRAT.md`](docs/CONTRAT.md).
 
@@ -58,12 +63,12 @@ Le détail des colonnes est dans [`docs/CONTRAT.md`](docs/CONTRAT.md).
 
 - **Si elle est dans le Lakehouse**, sous un des noms ci-dessus : rien à faire. Elle apparaît à la prochaine
   lecture (10 minutes au plus, ou le bouton « Mettre à jour les données »).
-- **Le classeur de coûts** : le déposer dans `Files/mba/` du Lakehouse, et le site lit le plus récent. Sinon,
-  `scripts/importer_couts_mba.py "<chemin du .xlsx>"`.
-- **Avant la démo** : `scripts/telecharger_lakehouse.py`, pour que la copie de secours soit fraîche.
+- **Les classeurs de coûts** : le classeur Citiz déposé dans `Files/mba/` du Lakehouse est lu en direct. Sinon,
+  `couts_mba.lire_classeur` et `couts_mba.lire_classeur_collectivite` refont `data/reel/mba/couts.parquet`
+  depuis `../docs/couts/`.
+- **Avant la démo** : `./start.sh`, pour que la copie soit fraîche.
 
-Dans **Fabric**, le notebook [`notebooks/optimisation_fabric.ipynb`](notebooks/optimisation_fabric.ipynb) lit les
-mêmes tables. Il est **préparé, mais pas déployé**.
+Dans **Fabric**, le notebook `optimisation_fabric` de l'espace « Hackathon Mobi » lit les mêmes tables.
 
 ## La carte à calques
 
@@ -71,8 +76,8 @@ Dans la barre latérale, le menu **Calques de la carte** permet de superposer :
 
 | Groupe | Calques |
 | --- | --- |
-| Résultat de l'optimisation (MSc 4) | stations proposées, habitants nouvellement desservis, **zones à potentiel** |
-| Offre existante (MSc 1) | stations Citiz, VélôToulouse, arrêts de bus, arrêts de métro, tram et train, lignes de bus Tisséo |
+| Résultat de l'optimisation (MSc 4) | stations proposées, habitants nouvellement desservis, **zones à potentiel**, places proposées, arbres autour des stations proposées |
+| Offre existante (MSc 1) | stations Citiz (et leur usage mesuré), VélôToulouse, arrêts de bus, arrêts de métro, tram et train, lignes de bus Tisséo |
 | Territoire (MSc 1) | population par carreau, limites des communes |
 | Cartes de l'équipe | carte de chaleur et population servie (MSc 2), score de potentiel (MSc 3) |
 
@@ -85,9 +90,11 @@ Dans la barre latérale, le menu **Calques de la carte** permet de superposer :
 
 ## Zones à potentiel : modèle prédictif ou critères au choix
 
-Dans la barre latérale, la section **« Zones à potentiel : sur quoi se baser ? »** propose deux choix :
+Dans la barre latérale, la section **« Zones à potentiel : sur quoi se baser ? »** propose trois choix :
 
 - **Modèle prédictif** (par défaut) : le score de potentiel Citiz, appliqué à l'emplacement (décision 7).
+- **Les 8 critères de Citiz** : l'indice Citiz, moyenne des 8 critères de « l'emplacement idéal » que Citiz nous
+  a donnés (`optim_mobilite/criteres_citiz.py`, notebook `08_criteres_citiz`).
 - **Mes critères** : un panneau par groupe, avec pour chaque critère une case, un poids (×1 à ×3) et, quand
   c'est réglable, un sens. Les groupes sont Habitants, Motorisation, Quartier, Services à 5 min, Transport,
   Stationnement et Modèle.
@@ -104,8 +111,11 @@ Un réglage se partage par l'URL, par exemple :
 ```text
 optim_mobilite/          le module, importable aussi depuis un notebook Fabric
   fabric.py              lecture en direct du Lakehouse (deltalake, DuckDB en secours), copie de secours
-  couts_mba.py           lecture du classeur Excel des coûts
+  couts_mba.py           lecture des classeurs Excel des coûts (Citiz, vélo et bus)
   criteres.py            critères au choix : registre, rang, score pondéré (et calques)
+  criteres_citiz.py      les 8 critères de Citiz, la fiche d'un carreau et sa place proposée
+  rentabilite.py         recette, résultat et délai de retour d'une station, d'après l'usage mesuré
+  impact.py              voitures en moins, CO2, voirie libérée (ADEME), ménages modestes et sans voiture
   contrat.py             chargement (Fabric ou copie locale) et vérification des tables
   preparation.py         assemblage : stations existantes, accessibilité provisoire, tracés de bus Tisséo
   couverture.py          candidats, puis qui couvre qui à 400 m (KDTree, matrice creuse)
@@ -117,7 +127,7 @@ optim_mobilite/          le module, importable aussi depuis un notebook Fabric
   mock.py, geo.py        coûts MOCK, projections EPSG:3035 <-> WGS84
 app/streamlit_app.py     la démo
 app/carte.py             les calques de la carte : sources, disponibilité, couleurs, vie privée
-scripts/                 copie du Lakehouse, vérification, comparaison exacte, export Power BI, captures
+scripts/                 copie des tables du Lakehouse (telecharger_lakehouse.py)
 tests/                   tests sur de petits cas faits main
 docs/                    contrat, décisions, fiche oral, limites, Power BI
 ```
@@ -141,6 +151,7 @@ Seuls les étapes 3 à 5 tournent quand on bouge un curseur.
 
 ## Documentation pour l'oral
 
+- [`../docs/business_plan.md`](../docs/business_plan.md) : les chiffres du business plan et de l'impact.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) : chaque choix et pourquoi.
 - [`docs/ORAL.md`](docs/ORAL.md) : l'algorithme en 3 phrases, la démo, les questions du jury.
 - [`docs/LIMITES.md`](docs/LIMITES.md) : les limites assumées.
