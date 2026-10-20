@@ -19,12 +19,12 @@
 # MARKDOWN ********************
 
 # # Collecte Citiz toutes les 10 minutes
-#
+# 
 # Relève l'état de toutes les voitures Citiz de France (flux GBFS `vehicle_status`) pour
 # mesurer l'usage des stations pendant le hackathon et vérifier le score du modèle
 # (décision 7). Le flux `station_status` n'est pas utilisé : une partie de ses relevés
 # date de 2024, alors que `vehicle_status` suit les réservations en direct.
-#
+# 
 # Chaque passage garde le JSON brut dans `Files/brut/citiz/vehicle_status/<jour>/` et ajoute
 # une ligne par voiture à la table `citiz_releves`. Le notebook est planifié toutes les
 # 10 minutes jusqu'au mercredi 21 octobre au soir.

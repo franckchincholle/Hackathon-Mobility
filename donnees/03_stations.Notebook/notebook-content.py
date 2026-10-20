@@ -19,9 +19,9 @@
 # MARKDOWN ********************
 
 # # Stations partagées (GBFS)
-#
+# 
 # Charge les systèmes de véhicules partagés (format GBFS) et construit trois tables :
-#
+# 
 # - `stations_partagees` : les stations de la zone (vélos, autopartage...) et celles à
 #   moins de `rayon_m` d'un de ses carreaux (une station juste derrière la limite sert aussi
 #   les habitants du bord) ; la colonne `dans_zone` les distingue. La colonne `virtuelle`
@@ -32,7 +32,7 @@
 #   carreau INSEE où elles se trouvent, pour la cible du modèle (décision 7).
 # - `vehicules_libres` : une photo à l'instant T des véhicules sans station
 #   (free-floating). Ils ne comptent pas comme option de transport (décision 3).
-#
+# 
 # Les systèmes de la zone sont trouvés dans le catalogue de transport.data.gouv.fr : ceux
 # dont la couverture déclarée touche une commune, une intercommunalité, un département ou la
 # région de la zone, et ceux déclarés pour toute la France (Clem, Dott), dont on garde ce
@@ -40,7 +40,7 @@
 # n'est pas chargé. Les 15 réseaux Citiz forment une liste fixe, la même que celle de
 # 04_collecte_citiz, pour que les identifiants de stations des deux tables se rejoignent.
 # Le type d'un véhicule (vélo, trottinette, scooter) est celui que l'opérateur déclare.
-#
+# 
 # Chaque point porte ses coordonnées en lat/lon, en mètres (EPSG:3035, la projection des
 # carreaux INSEE) et l'identifiant du carreau où il se trouve. Les réglages viennent de la
 # bibliothèque de variables `parametres_mobilite` ; 01_carreaux doit avoir tourné avant,

@@ -19,10 +19,10 @@
 # MARKDOWN ********************
 
 # # Variables des carreaux : motorisation et équipements
-#
+# 
 # Décrit les habitants et l'environnement de chaque carreau de 200 m, pour le modèle
 # (décision 7) et les cartes. Quatre tables :
-#
+# 
 # - `iris` : un IRIS (quartier INSEE d'environ 2 000 habitants) par ligne, avec la
 #   motorisation de ses ménages (recensement 2023, publié le 20 octobre 2026) et, pour les
 #   IRIS de la zone, leur contour.
@@ -33,7 +33,7 @@
 #   motorisation qui s'y applique, le nombre d'équipements par famille et le nombre
 #   d'emplois salariés, dans le carreau (`_carreau`) et à moins de `rayon_m` de son centre
 #   (`_5min`, le même rayon que pour les transports).
-#
+# 
 # Les emplois viennent du répertoire Sirene, mis à jour chaque mois : les établissements
 # actifs qui déclarent une tranche d'effectif salarié (au 31 décembre 2024), placés par la
 # géolocalisation de l'INSEE et comptés pour le milieu de leur tranche (15 000 pour la
@@ -41,13 +41,13 @@
 # millions de salariés que compte l'INSEE. Les établissements placés au hasard dans leur
 # commune (qualité 33) ne comptent pas. Une structure qui déclare tout son personnel à une
 # adresse (mairie, CHU sur plusieurs sites) le concentre en un point.
-#
+# 
 # La motorisation n'existe pas au carreau. Chaque carreau prend celle de l'IRIS où tombe son
 # centre (`rattachement` = iris), celle de sa commune si elle n'est pas découpée en IRIS
 # (= commune), ou celle de l'ensemble des communes qu'il touche s'il est à cheval sur
 # plusieurs communes non découpées (= communes). Les contours des IRIS viennent de l'IGN ;
 # seuls ceux des communes découpées sont chargés.
-#
+# 
 # Les réglages viennent de la bibliothèque de variables `parametres_mobilite` ; 01_carreaux
 # doit avoir tourné avant, avec le même jeu de valeurs.
 

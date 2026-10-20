@@ -19,9 +19,9 @@
 # MARKDOWN ********************
 
 # # Arrêts de transport en commun (GTFS)
-#
+# 
 # Charge les GTFS des réseaux qui desservent la zone et construit trois tables :
-#
+# 
 # - `arrets` : un arrêt par zone d'arrêt GTFS (`parent_station`) et par réseau. Le
 #   dédoublonnage se fait en deux temps : les quais d'un même arrêt (un par sens, par voie)
 #   sont regroupés sous leur zone d'arrêt, puis deux zones d'arrêt du même réseau, au même
@@ -34,13 +34,13 @@
 #   fréquence de la décision 3).
 # - `reseaux` : un réseau par ligne, avec son fichier, sa période de validité, le mardi lu
 #   et son statut ; les réseaux écartés y figurent aussi, avec la raison.
-#
+# 
 # Les réseaux sont trouvés dans le catalogue de transport.data.gouv.fr : ceux dont la
 # couverture déclarée touche une commune, une intercommunalité, un département ou la région
 # de la zone. Le GTFS national de la SNCF s'y ajoute, réduit aux TER (trains et cars) : les
 # TGV, Intercités et Ouigo font de la longue distance. Les réseaux que le catalogue classe
 # seulement scolaires sont écartés : ils sont réservés aux élèves.
-#
+# 
 # Des horaires à jour : le jour de référence est le mardi le plus chargé des
 # `semaines_reference` semaines à venir, ce qui écarte les mardis de vacances. De chaque
 # réseau, on prend le fichier qui couvre le plus de ces mardis : un réseau qui publie
@@ -48,12 +48,12 @@
 # valide aujourd'hui mais sans horaire publié pour le jour de référence est lu à son mardi
 # le plus chargé (`autre mardi`). Un réseau expiré ou hors saison garde ses arrêts et ses
 # lignes avec 0 passage : sur la carte, sa zone est à marquer « données absentes ».
-#
+# 
 # Les agrégats régionaux recopient des réseaux publiés à part. Un exploitant d'un agrégat
 # dont la moitié des arrêts est à moins de 100 m d'un arrêt d'un réseau à jour publié à
 # part est une copie, écartée ; un réseau expiré dont l'agrégat donne une copie à jour est
 # remplacé par elle.
-#
+# 
 # Une ligne a un identifiant unique (`ligne_id` : réseau, exploitant et nom commercial) :
 # ses variantes et ses deux sens ne comptent qu'une fois. On garde les arrêts de la zone et
 # ceux à moins de `rayon_m` d'un de ses carreaux. Les réglages viennent de la bibliothèque

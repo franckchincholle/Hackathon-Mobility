@@ -19,10 +19,10 @@
 # MARKDOWN ********************
 
 # # Carreaux INSEE de 200 m
-#
+# 
 # Charge les carreaux de 200 m de l'INSEE (Filosofi 2021 : population, ménages, revenus,
 # âges, logements) et construit trois tables :
-#
+# 
 # - `zone_communes` : les communes de la zone d'étude, leur intercommunalité, leur
 #   département, leur région et leur contour (geo.api.gouv.fr). Les notebooks 02 et 03 la
 #   relisent pour savoir ce qui est dans la zone et quels réseaux la desservent.
@@ -32,12 +32,12 @@
 # - `carreaux_france` : les mêmes variables pour toute la France publiée par l'INSEE
 #   (métropole, Martinique, La Réunion), sans contour, pour entraîner le modèle sur toutes
 #   les villes où Citiz est présent.
-#
+# 
 # Les réglages sont dans la bibliothèque de variables `parametres_mobilite` de l'espace :
 # son jeu de valeurs actif choisit la zone et le Lakehouse où écrire (Toulouse Métropole
 # dans `Mobilite` par défaut, l'Occitanie dans `MobiliteOccitanie` avec le jeu
 # « occitanie »).
-#
+# 
 # L'identifiant INSEE porte le coin sud-ouest du carreau dans sa projection
 # (`CRS3035RES200mN2316600E3630000`) : le centre est 100 m plus au nord et plus à l'est.
 # Les carreaux trop peu peuplés ont des valeurs estimées par l'INSEE (secret statistique) :

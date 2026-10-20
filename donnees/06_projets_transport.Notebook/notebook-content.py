@@ -19,20 +19,20 @@
 # MARKDOWN ********************
 
 # # Projets de transport annoncés
-#
+# 
 # Charge les stations des projets de transport décidés dans la zone, pour montrer comment
 # l'offre va changer et où Citiz complète ou double le futur réseau. Deux tables :
-#
+# 
 # - `projets_arrets` : une ligne par station future, au même format que `arrets` et
 #   `arrets_lignes` réunis (`arret_id`, `ligne_id`, mode, position, carreau), avec le projet,
 #   l'année de mise en service annoncée et l'arrêt existant le plus proche à moins de 150 m
 #   (`correspondance_arret_id`). On peut l'ajouter à `arrets_lignes` pour compter les options
 #   d'un carreau après la mise en service.
 # - `projets_lignes` : une ligne par projet, avec sa source.
-#
+# 
 # Aucun réseau ne publie ses projets en données ouvertes : les stations et leurs
 # coordonnées viennent de Wikidata (licence CC0). Deux sources :
-#
+# 
 # - les projets vérifiés à la main dans `PROJETS`, avec les dates des annonces officielles.
 #   Le prolongement de la ligne B garde l'identifiant de la ligne B existante (`ligne_id`
 #   de Tisséo) : un carreau déjà proche de la ligne B ne gagne pas d'option ;
@@ -40,7 +40,7 @@
 #   marque « en construction » en France, avec leur ligne et leur date d'ouverture quand
 #   Wikidata les donne. C'est une liste tenue par des bénévoles, sans garantie d'être
 #   complète ; un projet décidé mais pas encore en chantier n'y figure pas.
-#
+# 
 # Les notebooks 01 et 02 doivent avoir tourné avant, avec le même jeu de valeurs.
 
 # CELL ********************

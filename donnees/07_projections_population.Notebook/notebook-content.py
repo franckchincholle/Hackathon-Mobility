@@ -19,21 +19,21 @@
 # MARKDOWN ********************
 
 # # Projections de population (Omphale)
-#
+# 
 # Charge les projections de population de l'INSEE par département, de 2018 à 2070, dans le
 # scénario central, et construit la table `projections_population` : une ligne par
 # département et par année, avec la population totale et trois grandes tranches d'âge
 # (0-19 ans, 20-64 ans, 65 ans ou plus). Elle donne une tendance pour le pitch : le
 # département gagne-t-il des habitants, vieillit-il ? Elle ne sert pas de variable au
 # carreau : une projection départementale ne dit rien d'un quartier.
-#
+# 
 # Source : Omphale 2022, dernière édition départementale de l'INSEE (totaux sur
 # https://www.insee.fr/fr/statistiques/6652134, détail par âge sur
 # https://www.insee.fr/fr/statistiques/7747107). Ses hypothèses datent de 2021 : les
 # projections nationales publiées en juin 2026 prévoient moins de naissances (1,45 enfant
 # par femme au lieu de 1,8), sans déclinaison par département à ce jour. La part des moins
 # de 20 ans est donc sans doute surestimée à long terme.
-#
+# 
 # Le Lakehouse où écrire vient de la bibliothèque de variables `parametres_mobilite`.
 
 # CELL ********************
