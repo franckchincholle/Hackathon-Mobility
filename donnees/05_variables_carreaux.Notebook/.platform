@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "05_variables_carreaux",
+    "description": "Motorisation des ménages (IRIS) et équipements à 5 minutes de chaque carreau"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "4e9a1c7b-2d5f-4b8e-a613-c0f7d92e5b18"
+  }
+}

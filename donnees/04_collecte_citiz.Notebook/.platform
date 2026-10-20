@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "04_collecte_citiz",
+    "description": "Relève l'état des voitures Citiz de France toutes les 10 minutes"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "6b8f913d-a00e-40d4-9415-d67e55a45034"
+  }
+}

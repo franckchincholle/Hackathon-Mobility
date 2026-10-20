@@ -1,0 +1,9 @@
+# Éditeurs
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Notes personnelles, hors dépôt
+notes/
+
+CLAUDE.md

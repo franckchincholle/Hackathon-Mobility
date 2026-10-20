@@ -1,0 +1,9 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/variableLibrary/definition/valueSet/1.0.0/schema.json",
+  "name": "occitanie",
+  "description": "Toute la région Occitanie, écrite dans un Lakehouse à part pour ne pas remplacer Toulouse",
+  "variableOverrides": [
+    { "name": "zone", "value": "communes?codeRegion=76" },
+    { "name": "lakehouse", "value": "MobiliteOccitanie" }
+  ]
+}
