@@ -1,0 +1,132 @@
+table acces_carreau
+	lineageTag: eacc8182-d7d0-45ba-b577-ee4f838a6f30
+	sourceLineageTag: [dbo].[acces_carreau]
+
+	column idcar_200m
+		dataType: string
+		lineageTag: 5d74304e-dae1-4806-83fd-54ed12e726f6
+		sourceLineageTag: idcar_200m
+		summarizeBy: none
+		sourceColumn: idcar_200m
+
+		annotation SummarizationSetBy = Automatic
+
+	column lat
+		dataType: double
+		lineageTag: 555371c6-5bb3-40c5-95d0-465add330e41
+		sourceLineageTag: lat
+		summarizeBy: sum
+		sourceColumn: lat
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column lon
+		dataType: double
+		lineageTag: efc5ef9c-70bf-44bd-a8db-ac64bd4f2225
+		sourceLineageTag: lon
+		summarizeBy: sum
+		sourceColumn: lon
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column contour_wkt
+		dataType: string
+		lineageTag: ae4cb795-0291-484c-8038-03168bc48ca1
+		sourceLineageTag: contour_wkt
+		summarizeBy: none
+		sourceColumn: contour_wkt
+
+		annotation SummarizationSetBy = Automatic
+
+	column population
+		dataType: double
+		lineageTag: 9aa871fd-b99a-455f-a231-57f9252945b3
+		sourceLineageTag: population
+		summarizeBy: sum
+		sourceColumn: population
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column options
+		dataType: int64
+		formatString: 0
+		lineageTag: 1c8a1aa6-65a1-4ff4-8f09-249c631d25bf
+		sourceLineageTag: options
+		summarizeBy: sum
+		sourceColumn: options
+
+		annotation SummarizationSetBy = Automatic
+
+	column nb_lignes
+		dataType: int64
+		formatString: 0
+		lineageTag: 5df5dd1a-a73b-424d-af8d-0a279cf92d76
+		sourceLineageTag: nb_lignes
+		summarizeBy: sum
+		sourceColumn: nb_lignes
+
+		annotation SummarizationSetBy = Automatic
+
+	column nb_velo
+		dataType: int64
+		formatString: 0
+		lineageTag: 4a303928-07d8-409f-9f37-93c4be30d33a
+		sourceLineageTag: nb_velo
+		summarizeBy: sum
+		sourceColumn: nb_velo
+
+		annotation SummarizationSetBy = Automatic
+
+	column nb_citiz
+		dataType: int64
+		formatString: 0
+		lineageTag: 738b4477-fd32-46af-8c2d-60a7c95e66aa
+		sourceLineageTag: nb_citiz
+		summarizeBy: sum
+		sourceColumn: nb_citiz
+
+		annotation SummarizationSetBy = Automatic
+
+	column options_1000_hab
+		dataType: double
+		lineageTag: a2042768-2a32-48d8-bca0-fce0bf58b195
+		sourceLineageTag: options_1000_hab
+		summarizeBy: sum
+		sourceColumn: options_1000_hab
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column grise
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: cf462039-bb38-45a3-8e40-7577e40745e9
+		sourceLineageTag: grise
+		summarizeBy: none
+		sourceColumn: grise
+
+		annotation SummarizationSetBy = Automatic
+
+	column couleur
+		dataType: string
+		lineageTag: 4a9ee535-929c-4fe1-a612-e52c55faae22
+		sourceLineageTag: couleur
+		summarizeBy: none
+		sourceColumn: couleur
+
+		annotation SummarizationSetBy = Automatic
+
+	partition acces_carreau = entity
+		mode: directLake
+		source
+			entityName: acces_carreau
+			schemaName: dbo
+			expressionSource: 'DirectLake - Mobilite'
+
