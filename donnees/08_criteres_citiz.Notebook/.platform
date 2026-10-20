@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "08_criteres_citiz",
+    "description": "Les 8 critères de Citiz par carreau, les arbres, et une place loin des arbres par carreau"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "27d94c87-33ae-446c-a663-6b3f3c6c8850"
+  }
+}
