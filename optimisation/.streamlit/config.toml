@@ -1,0 +1,11 @@
+# Charte graphique Citiz (variables de thème de citiz.coop) : bleu-vert #32b4b5, texte #202020.
+[theme]
+base = "light"
+primaryColor = "#32b4b5"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0FAFA"
+textColor = "#202020"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

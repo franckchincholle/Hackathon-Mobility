@@ -1,0 +1,9 @@
+# « fabric » : lecture en direct du Lakehouse à chaque chargement, la dernière lecture réussie
+# étant gardée dans dossier_donnees comme secours ; « local » : seulement la copie locale.
+# Surchargeable par la variable d'environnement OPTIM_SOURCE.
+source = "fabric"
+
+# Dossier des données de l'équipe (copie locale du Lakehouse : scripts/telecharger_lakehouse.py).
+# Chemin relatif au dossier optimisation/ (ou absolu, ou /lakehouse/default/Files/... dans Fabric).
+# On peut aussi le surcharger par la variable d'environnement OPTIM_DONNEES.
+dossier_donnees = "data/reel"

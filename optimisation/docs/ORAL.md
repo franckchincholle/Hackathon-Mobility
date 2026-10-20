@@ -1,0 +1,118 @@
+# Fiche oral (MSc 4 : optimisation et outil de démo)
+
+> Les chiffres entre crochets viennent des données réelles de MSc 1 (Toulouse Métropole). Ils restent
+> **provisoires** : l'accessibilité est calculée en attendant MSc 2, et les coûts du vélo et du bus sont estimés
+> en attendant le MBA. Le score de MSc 3 et le coût Citiz du MBA sont intégrés, et lus en direct sur Fabric. Avant l'oral, relancez l'application et `scripts/comparer_exact.py` sur les données
+> définitives, puis remplacez-les.
+
+## L'algorithme en trois phrases
+
+1. Pour chaque emplacement possible, on compte les habitants à moins de 400 m (5 minutes à pied) qui n'ont
+   pas encore cet équipement, pondérés par le curseur équité, et on multiplie par le score de potentiel de
+   l'emplacement.
+2. On pose d'abord la station qui rapporte le plus **par euro**, on retire ces habitants (chacun ne compte
+   qu'une fois), et on recommence tant que le budget le permet.
+3. On vérifie qu'aucune station seule ne ferait mieux, et on mesure l'écart avec la solution exacte :
+   **[99,4 %] de l'optimum en moyenne** sur Toulouse Métropole.
+
+## Démo pas à pas (environ 3 minutes)
+
+Avant de passer :
+
+- lancez `streamlit run app/streamlit_app.py` ;
+- gardez les captures de `sorties/captures/` ouvertes en secours ;
+- si le réseau est mauvais, coupez « Fond de carte ».
+
+1. **Le problème** (budget Citiz, 500 k€ par an, α = 1, coûts par défaut du MBA).
+   *« Citiz consacre 500 000 € par an à de nouvelles stations. Où les poser dans la métropole ? »*
+   Lisez la phrase-choc : *« Avec 500 k€ par an, Citiz touche [83 090] habitants de plus ([69 900] à
+   [118 940] selon les coûts). »* Précisez : *« Une station coûte [21 000] € par an, un chiffre sourcé et
+   recoupé avec le seuil de rentabilité que Citiz nous a donné. »*
+2. **La liste**. *« La n°1 est celle qui touche le plus d'habitants par euro. L'ordre de la liste, c'est
+   l'ordre de priorité. »* [23] stations se répartissent entre Toulouse, Colomiers, Blagnac, Cugnaux et
+   Aucamville.
+3. **Les calques**. Ouvrez « Calques de la carte » et cochez « Zones à potentiel » : *« En rouge, les
+   emplacements les plus prometteurs avant tout arbitrage de budget. Les stations retenues tombent dessus. »*
+   Ajoutez les stations Citiz existantes et les lignes de bus. Recadrez sur une commune (Blagnac).
+   Les cartes de MSc 2 et MSc 3 se superposent ici dès qu'elles sont livrées.
+4. **Vos critères**. Dans « Zones à potentiel : sur quoi se baser ? », choisissez « Mes critères », puis
+   cochez seulement la densité et les ménages sans voiture. *« Le décideur peut tester ses propres
+   hypothèses : la carte et la liste se recalculent sur les seuls critères qu'il garde. Le modèle prédictif
+   reste notre référence, et il est lui-même un critère possible. »* Montrez un calque d'analyse (motorisation
+   ou niveau de vie).
+   Si on vous parle des arbres : *« Citiz nous l'a demandé. Le critère "stationnement dégagé" est prêt, il
+   s'activera dès qu'on aura la carte des arbres. »*
+5. **Le budget**. Glissez de 500 à 250 k€, puis à 1 M€ : *« Le calcul est instantané. »*
+   Onglet **Budget → habitants** : *« Chaque euro rapporte moins que le précédent. »*
+6. **L'équité**. Restez sur Citiz et passez le curseur de 0 à 3 : l'encadré « Effet de ce réglage » montre
+   que presque rien ne bouge. *« Pour Citiz, le modèle de potentiel désigne les quartiers denses et déjà
+   desservis, là où l'autopartage marche déjà. Prioriser les habitants sans transport ne suffit pas à
+   l'en détourner. C'est un résultat en soi : l'autopartage seul ne comblera pas les zones sans transport. »*
+   Basculez sur la collectivité à α = 3 : *« Ici, le même curseur apporte un vélo ou un bus à [9 660]
+   habitants de plus qui n'avaient rien, pour [7 %] d'habitants touchés en moins. Le décideur tranche. »*
+7. **La robustesse**. Passez en coûts hauts : *« [18] stations au lieu de [23], mais les mêmes, dans le même ordre. »*
+8. **La collectivité**, 1 M€ par an : *« Même méthode. Les arrêts de bus ne sont proposés que sur des lignes Tisséo
+   qui existent. »*
+9. **La preuve**. Onglet **Méthode** : *« [139] calculs au lieu de [108 000] grâce au glouton paresseux, et
+   [99,4 %] de l'optimum mesuré contre une résolution exacte. »*
+
+## Questions probables du jury, sur ma partie
+
+### Jury non technique
+
+**1. Pourquoi faire confiance à cette liste ?**
+Chaque station est justifiée par un chiffre vérifiable : les habitants qu'elle touche et son coût. Nous
+avons comparé la méthode à la solution mathématiquement optimale sur toute la métropole : [99,4 %] en
+moyenne, [98,3 %] au pire. Et la liste reste la même quelle que soit la fourchette de coûts.
+
+**2. Le curseur équité, c'est vous qui choisissez sa valeur ?**
+Non. L'outil montre le prix de chaque choix. Pour la collectivité, à α = 3 : [−7 %] d'habitants desservis,
+mais [16 900] habitants sans transport gagnés au lieu de [7 240]. Pour Citiz, le curseur ne change presque
+rien, car le potentiel de l'autopartage est dans les quartiers denses : c'est un résultat, pas un défaut. Le choix revient au décideur. α = 1 est un
+point de départ : un habitant sans transport y compte double.
+
+**3. Que se passe-t-il si les coûts sont faux ?**
+On calcule tout avec les trois niveaux de coûts (12 200, 21 000 et 26 700 € par station et par an).
+Les coûts hauts gardent le début de la même liste ; seul le nombre de stations change.
+
+**4. Pourquoi pas directement là où il y a le plus de monde ?**
+On compte les habitants **nouvellement** desservis. Une station au cœur de Toulouse, où Citiz est déjà
+présent, en gagne peu de nouveaux. Et deux stations voisines se partagent leurs habitants : on ne compte
+jamais deux fois la même personne.
+
+**5. Et la vie privée ?**
+Les carreaux sous le seuil sont grisés et jamais affichés seuls, et toutes les populations sont arrondies
+à la dizaine.
+
+### Jury data scientist
+
+**6. Pourquoi un glouton plutôt qu'une optimisation exacte ?**
+C'est une couverture maximale sous budget, un problème NP-difficile à rendements décroissants. Le glouton
+au ratio, combiné au meilleur élément seul, a une garantie démontrée de ½(1 − 1/e). Il répond en une
+fraction de seconde, contre 3 à 53 s pour HiGHS. Et l'écart mesuré avec l'optimum prouvé est de
+[1,7 %] au pire.
+
+**7. Qu'est-ce que le glouton paresseux change ?**
+Rien au résultat (un test le vérifie sur 30 instances), tout à la vitesse. Les gains ne peuvent que
+baisser, donc les anciens sont des majorants : [139] recalculs au lieu de [108 000].
+
+**8. Comment le score de potentiel entre-t-il dans le calcul ?**
+Comme le dit la décision 7 : valeur d'un emplacement = habitants nouvellement desservis × score de cet
+emplacement. Dans la version exacte, chaque habitant est rattaché à une seule station et vaut son score.
+*Pour la construction et les limites du modèle, je renvoie à MSc 3.*
+
+**9. Comment l'outil tient-il compte de l'offre existante ?**
+Un candidat n'a pas déjà la même offre à 400 m, et un habitant qui l'a déjà ne compte pas comme gagné. Le
+curseur équité utilise le nombre d'options à 5 min (lignes distinctes et stations).
+*Pour la mesure de l'accessibilité et le choix des 400 m, je renvoie à MSc 2.*
+
+**10. Comment ça passe à l'échelle ?**
+La géométrie se calcule une fois : un KDTree donne les voisins à 400 m de chaque candidat, rangés dans une
+matrice creuse. Chaque scénario ne change que des poids et des coûts. Pour passer à l'Occitanie, il suffit
+que MSc 1 change sa zone (`ZONE` dans `01_carreaux`) : le code de l'optimisation ne change pas.
+
+**Question bonus : pourquoi ne pas toujours utiliser vos critères plutôt que le modèle ?**
+Le modèle est évalué : il apprend, par validation croisée, ce qui distingue les quartiers où Citiz fonctionne.
+Les critères, eux, traduisent des hypothèses du décideur. Ils sont utiles pour explorer (« et si on misait sur
+les ménages sans voiture ? »), mais leurs poids sont un choix, pas une mesure. L'outil montre les deux, et
+dit toujours lequel est utilisé.

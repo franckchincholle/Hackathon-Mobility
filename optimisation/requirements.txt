@@ -1,0 +1,21 @@
+# Cœur de l'optimisation (aussi utilisable dans un notebook Fabric)
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+pyarrow>=14
+pyproj>=3.6
+# Lecture du Lakehouse de MSc 1 (scripts/telecharger_lakehouse.py)
+deltalake>=0.18
+requests>=2.31
+duckdb>=1.1  # tables Delta avec « deletion vectors » (ex. score de potentiel), que deltalake ne lit pas
+# Lecture du classeur de coûts du MBA (scripts/importer_couts_mba.py)
+openpyxl>=3.1
+pulp>=2.8,<3  # API classique (LpVariable, lpSum) ; embarque CBC
+highspy>=1.7  # HiGHS, solveur libre plus rapide que CBC, utilisé par PuLP
+# Démo
+streamlit>=1.38
+pydeck>=0.9
+matplotlib>=3.8
+# Tests
+pytest>=8
+playwright>=1.48  # captures du plan B (scripts/captures.py)
