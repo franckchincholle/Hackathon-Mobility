@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from . import equite, glouton
+from . import equite, glouton, impact, rentabilite
 from .contrat import FOURCHETTES, Donnees, cout_station  # noqa: F401 (réexportés pour l'application)
 from .couverture import Structure
 
@@ -85,13 +85,15 @@ def resoudre(donnees: Donnees, structure: Structure, budget: float, alpha: float
                 "population_nouvelle": pop[nouveaux].sum(),
                 "dont_sans_transport": pop[nouveaux][sans_transport[nouveaux]].sum(),
                 "valeur": score[i] * poids[nouveaux].sum(),
+                "occupation_prevue": carreau.get("occupation_prevue", np.nan) if t == "citiz" else np.nan,
             }
         )
     colonnes = ["rang", "type", "equipement", "idcar_200m", "commune", "iris", "lon", "lat", "score", "cout_bas",
-                "cout_haut", "cout", "population_nouvelle", "dont_sans_transport", "valeur"]
+                "cout_haut", "cout", "population_nouvelle", "dont_sans_transport", "valeur", "occupation_prevue"]
     liste = pd.DataFrame(lignes, columns=colonnes)
     liste["cout_cumule"] = liste.cout.cumsum()
     liste["population_cumulee"] = liste.population_nouvelle.cumsum()
+    liste = ajouter_comptes(liste, fourchette)
 
     # Habitants distincts : pour le budget collectivité, un habitant qui gagne un vélo ET un
     # bus compte une fois ici (et une fois par type dans la liste).
@@ -112,8 +114,46 @@ def resoudre(donnees: Donnees, structure: Structure, budget: float, alpha: float
         "recalculs": choix.recalculs,
         "nb_candidats": int(structure.couverture.shape[0]),
         **{f"habitants_nouveaux_{t}": float(pop[couverts & (el.type == t).to_numpy()].sum()) for t in structure.types},
+        **bilan(liste, c, carreaux_gagnes, fourchette),
     }
     return Resultat(structure.budget, budget, alpha, fourchette, liste, indicateurs, couverts, choix)
+
+
+def ajouter_comptes(liste: pd.DataFrame, fourchette: str) -> pd.DataFrame:
+    """Recette, résultat et délai de retour de chaque station Citiz proposée (rentabilite.py).
+
+    Sans prévision d'usage pour un carreau, la station est supposée occupée comme la moyenne du
+    réseau : `occupation_estimee` le dit, et l'écran aussi.
+    """
+    liste = liste.copy()
+    citiz = (liste.type == "citiz").to_numpy()
+    liste["occupation_estimee"] = citiz & liste.occupation_prevue.isna().to_numpy()
+    liste.loc[liste.occupation_estimee, "occupation_prevue"] = rentabilite.OCCUPATION_RESEAU
+    for colonne in ("recette", "resultat", "delai_ans"):
+        liste[colonne] = np.nan
+    if citiz.any():
+        # toutes les stations Citiz d'un scénario ont le même coût complet (même type, même fourchette)
+        comptes = rentabilite.comptes(liste.loc[citiz, "occupation_prevue"], float(liste.loc[citiz, "cout"].iat[0]),
+                                      fourchette)
+        for colonne in ("recette", "resultat", "delai_ans"):
+            liste.loc[citiz, colonne] = comptes[colonne].to_numpy()
+    return liste
+
+
+def bilan(liste: pd.DataFrame, carreaux: pd.DataFrame, carreaux_gagnes: np.ndarray, fourchette: str) -> dict:
+    """Ce que le scénario rapporte à Citiz, à la ville et aux ménages : les chiffres de l'en-tête."""
+    citiz = liste[liste.type == "citiz"]
+    voitures = rentabilite.VOITURES_PAR_STATION * len(citiz)
+    return {
+        "voitures_ajoutees": voitures,
+        "recette_totale": float(citiz.recette.sum()),
+        "resultat_total": float(citiz.resultat.sum()),
+        "investissement": float(len(citiz) * rentabilite.INVESTISSEMENT[fourchette]),
+        "occupation_moyenne_prevue": float(citiz.occupation_prevue.mean()) if len(citiz) else np.nan,
+        "usage_estime": bool(citiz.occupation_estimee.any()) if len(citiz) else False,
+        "environnement": impact.environnement(voitures),
+        "social": impact.social(carreaux, carreaux_gagnes),
+    }
 
 
 def potentiel_candidats(donnees: Donnees, structure: Structure, alpha: float,

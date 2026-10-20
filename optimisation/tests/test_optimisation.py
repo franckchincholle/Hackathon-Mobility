@@ -375,7 +375,10 @@ def test_calques_de_l_equipe_s_activent_a_la_livraison():
         population_servie=pd.DataFrame({"station_id": ["v1"], "population_servie": [480.0]}),
         scores_potentiel=pd.DataFrame({"idcar_200m": ["A", "B", "C"], "score_potentiel": [0.2, 0.5, 0.9]}),
     )
-    assert not {c.cle for c in carte.CALQUES if c.indisponible(d) and not c.cle.startswith("crit_")}
+    # les calques de Citiz (arbres, places, usage mesuré) attendent leurs propres tables
+    citiz = {"arbres", "places", "usage"}
+    assert {c.cle for c in carte.CALQUES if c.indisponible(d)} >= citiz
+    assert not {c.cle for c in carte.CALQUES if c.indisponible(d) and not c.cle.startswith("crit_")} - citiz
 
 
 # ---------- lecture en direct et copie de secours ----------

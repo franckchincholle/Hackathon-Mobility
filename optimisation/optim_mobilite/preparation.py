@@ -170,8 +170,12 @@ def assembler(t: dict[str, pd.DataFrame], dossier: Path) -> Donnees:
         if "iris" in t and "type_iris" in t["iris"]:
             types = dict(zip(t["iris"].code_iris, t["iris"].type_iris.fillna("").astype(str)))
             carreaux["type_iris"] = [types.get(codes.get(i, ""), "") for i in carreaux.idcar_200m]
+    arbres = None
     if "arbres" in t:
         carreaux["nb_arbres"] = compter_arbres(t["arbres"], carreaux, avertissements)
+        if {"lat", "lon"} <= set(t["arbres"].columns):
+            arbres = t["arbres"][["lat", "lon"]].apply(pd.to_numeric, errors="coerce").dropna()
+            arbres["x_3035"], arbres["y_3035"] = vers_3035(arbres.lon.to_numpy(), arbres.lat.to_numpy())
     sources["population, arrêts, stations"] = "INSEE Filosofi 2021 (carreaux 200 m), GTFS Tisséo, liO et TER, GBFS VélôToulouse et Citiz"
 
     # Une station de chaque type à 400 m : de quoi définir candidats et population nouvellement desservie.
@@ -218,6 +222,26 @@ def assembler(t: dict[str, pd.DataFrame], dossier: Path) -> Donnees:
         provisoires.append("score de potentiel")
     carreaux["score_velo"] = carreaux["score_bus"] = 1.0  # décision 11 : sans modèle dédié
 
+    # Ce que Citiz a demandé en plus : les raisons du score (modèle v2), ses 8 critères, l'usage mesuré.
+    # L'occupation prévue par le modèle v2 n'est pas reprise : sur 30 h de relevés, elle ne prédit
+    # presque rien (modele/RESULTATS.md) ; une nouvelle station compte avec l'usage moyen mesuré.
+    if "scores_v2" in t:
+        v2 = t["scores_v2"]
+        garder = [c for c in ("classe", "raison_1", "raison_2", "raison_3") if c in v2]
+        carreaux = carreaux.merge(v2.drop_duplicates("idcar_200m")[["idcar_200m", *garder]], on="idcar_200m", how="left")
+        sources["raisons du score"] = "modèle v2, appris sur les 14 autres réseaux Citiz et testé à l'aveugle sur Toulouse"
+    if "criteres_citiz" in t:
+        cc = t["criteres_citiz"].drop_duplicates("idcar_200m")
+        nouvelles = [c for c in cc.columns if c != "idcar_200m" and c not in carreaux]
+        carreaux = carreaux.merge(cc[["idcar_200m", *nouvelles]], on="idcar_200m", how="left")
+        sources["critères Citiz"] = "les 8 critères de l'emplacement idéal, mesurés par carreau (INSEE, GTFS, OSM, arbres)"
+    if "usage_stations" in t:
+        u = t["usage_stations"].drop_duplicates("station_cle")
+        colonnes_u = [c for c in ("occupation_24h", "occupation_jour", "nb_voitures") if c in u]
+        stations = stations.merge(u[["station_cle", *colonnes_u]].rename(columns={"station_cle": "id"}),
+                                  on="id", how="left")
+        sources["usage mesuré"] = "flux GBFS Citiz relevé toutes les 10 minutes (citiz_releves)"
+
     couts = t["couts"]
     noms = {"citiz": "Citiz", "velo": "vélo", "bus": "bus"}
     livres = [noms[c] for c in couts.loc[~couts.mock, "type"]]
@@ -238,6 +262,8 @@ def assembler(t: dict[str, pd.DataFrame], dossier: Path) -> Donnees:
         communes=t["zone_communes"],
         arrets=t["arrets"],
         population_servie=t.get("population_servie"),
+        places=t.get("places_candidates"),
+        arbres=arbres,
         sources=sources,
         provisoires=provisoires,
         avertissements=avertissements,

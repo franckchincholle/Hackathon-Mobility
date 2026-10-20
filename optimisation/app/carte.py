@@ -17,6 +17,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 import pydeck as pdk
+from scipy.spatial import cKDTree
 
 from optim_mobilite import criteres
 from optim_mobilite.scenarios import arrondi, nombre
@@ -59,6 +60,19 @@ def _sans_contours(d):
     return None if d.communes is not None and "contour_geojson" in d.communes else "contours non copiés"
 
 
+def _sans_usage(d):
+    mesure = "occupation_24h" in d.stations and d.stations.occupation_24h.notna().any()
+    return None if mesure else "usage mesuré pas encore disponible"
+
+
+def _sans_places(d):
+    return None if d.places is not None and len(d.places) else "places proposées pas encore disponibles"
+
+
+def _sans_arbres(d):
+    return None if d.arbres is not None and len(d.arbres) else "carte des arbres pas encore disponible"
+
+
 CALQUES = [
     Calque("proposees", "Stations proposées (cercles de 400 m)", "Recommandation", True,
            legende="numéro = rang de priorité ; cercle = 5 min à pied"),
@@ -67,7 +81,14 @@ CALQUES = [
     Calque("potentiel", "Zones à potentiel (valeur de chaque emplacement)", "Recommandation", False,
            legende="du turquoise clair (faible) au rouge (fort) : habitants qu'une station y gagnerait, "
                    "multipliés par le score choisi (modèle ou vos critères)"),
+    Calque("places", "Places proposées (parking sans arbre à moins de 10 m)", "Recommandation", True, _sans_places,
+           "losange prune : la place précise, avec son adresse"),
+    Calque("arbres", "Arbres autour des stations proposées", "Recommandation", False, _sans_arbres,
+           "point vert : un arbre à moins de 400 m d'une station proposée"),
     Calque("citiz", "Stations Citiz existantes", "Offre de transport existante", True),
+    Calque("usage", "Usage mesuré des stations Citiz", "Offre de transport existante", False, _sans_usage,
+           "part du temps où les voitures sont en location : gris sous 5 %, bleu-vert autour de la moyenne, "
+           "rouge au-dessus de 70 %"),
     Calque("velo", "Stations VélôToulouse", "Offre de transport existante", False),
     Calque("bus", "Arrêts de bus", "Offre de transport existante", False),
     Calque("lourd", "Arrêts de métro, tram, téléphérique, train", "Offre de transport existante", False),
@@ -143,8 +164,10 @@ def _points(df: pd.DataFrame, couleur, rayon_m: float, rayon_px: float, info: pd
                      stroked=True, get_line_color=[255, 255, 255], line_width_min_pixels=0.5, pickable=True)
 
 
-def couches(d, choix: set[str], r, structure, potentiel: pd.DataFrame, commune: str | None) -> list[pdk.Layer]:
-    """Les calques choisis, du fond vers le dessus."""
+def couches(d, choix: set[str], r, structure, potentiel: pd.DataFrame, commune: str | None,
+            places_proposees: pd.DataFrame | None = None) -> list[pdk.Layer]:
+    """Les calques choisis, du fond vers le dessus. `places_proposees` : la place de chaque station Citiz
+    proposée (rang, lat, lon, adresse, dist_arbre_m), à défaut les places de son carreau seulement."""
     c = d.carreaux
     st = d.stations
     sortie = []
@@ -216,9 +239,20 @@ def couches(d, choix: set[str], r, structure, potentiel: pd.DataFrame, commune: 
     if "velo" in choix:
         velo = st[st.type == "velo"]
         sortie.append(_points(velo, COULEURS["velo"] + [200], 30, 2, "VélôToulouse · " + _nom(velo)))
-    if "citiz" in choix:
+    if "citiz" in choix and "usage" not in choix:
         citiz = st[st.type == "citiz"]
         sortie.append(_points(citiz, CITIZ_FONCE + [230], 60, 4, "Citiz existante · " + _nom(citiz)))
+    if "usage" in choix and not _sans_usage(d):
+        citiz = st[(st.type == "citiz") & st.occupation_24h.notna()]
+        occ = citiz.occupation_24h.to_numpy()
+        couleur = [SOUS_SEUIL + [240] if o < 0.05 else [230, 51, 41, 240] if o > 0.7 else CITIZ_FONCE + [240] for o in occ]
+        voitures = citiz.nb_voitures.fillna(0).astype(int).astype(str) if "nb_voitures" in citiz else pd.Series("?", index=citiz.index)
+        info = ("Citiz existante · " + _nom(citiz) + " · " + voitures + " voiture(s) · en location "
+                + pd.Series([f"{o:.0%}" for o in occ], index=citiz.index) + " du temps (mesuré)")
+        sortie.append(pdk.Layer("ScatterplotLayer", citiz.assign(couleur=couleur, info=info)[["lon", "lat", "couleur", "info"]],
+                                get_position=["lon", "lat"], get_fill_color="couleur", get_radius=70,
+                                radius_min_pixels=6, stroked=True, get_line_color=[255, 255, 255],
+                                line_width_min_pixels=1, pickable=True))
     if "servie" in choix and d.population_servie is not None:
         servie = st.merge(d.population_servie, left_on="id", right_on="station_id")
         servie = servie.assign(rayon=np.sqrt(servie.population_servie.clip(lower=0)) * 4)
@@ -228,6 +262,26 @@ def couches(d, choix: set[str], r, structure, potentiel: pd.DataFrame, commune: 
                           .map(lambda n: nombre(int(n))) + " · " + _nom(servie))[["lon", "lat", "rayon", "info"]],
             get_position=["lon", "lat"], get_radius="rayon", get_fill_color=PRUNE + [110],
             stroked=True, get_line_color=PRUNE, line_width_min_pixels=1, pickable=True))
+    proposees_citiz = r.liste[r.liste.type == "citiz"]
+    if "arbres" in choix and not _sans_arbres(d) and len(proposees_citiz):
+        # seulement les arbres à 400 m des stations proposées : la carte reste légère
+        xy = c.set_index("idcar_200m").loc[proposees_citiz.idcar_200m, ["x_3035", "y_3035"]].to_numpy()
+        proches = cKDTree(xy).query_ball_point(d.arbres[["x_3035", "y_3035"]].to_numpy(), 400, return_length=True) > 0
+        arbres = d.arbres[proches]
+        sortie.append(pdk.Layer("ScatterplotLayer", arbres.assign(info="Arbre")[["lon", "lat", "info"]],
+                                get_position=["lon", "lat"], get_fill_color=COULEURS["velo"] + [160], get_radius=3,
+                                radius_min_pixels=1.5, pickable=False))
+    if "places" in choix and not _sans_places(d) and len(proposees_citiz):
+        places = (places_proposees if places_proposees is not None
+                  else proposees_citiz[["rang", "idcar_200m"]].merge(d.places, on="idcar_200m"))
+        if len(places):
+            adresse = places["adresse"].fillna("adresse inconnue").astype(str) if "adresse" in places else "adresse inconnue"
+            arbre = (" · arbre le plus proche à " + places.dist_arbre_m.round(0).astype("Int64").astype(str) + " m"
+                     if "dist_arbre_m" in places else "")
+            places = places.assign(info="Place proposée · rang " + places.rang.astype(str) + " · " + adresse + arbre)
+            sortie.append(pdk.Layer("ScatterplotLayer", places[["lon", "lat", "info"]], get_position=["lon", "lat"],
+                                    get_fill_color=PRUNE + [235], get_radius=12, radius_min_pixels=5, stroked=True,
+                                    get_line_color=[255, 255, 255], line_width_min_pixels=1.5, pickable=True))
     if "proposees" in choix and len(r.liste):
         liste = r.liste.astype({"equipement": str})
         liste = liste.assign(couleur=liste.type.map(COULEURS), texte=liste.rang.astype(str),
