@@ -35,7 +35,9 @@
 #
 # Les systèmes de la zone sont trouvés dans le catalogue de transport.data.gouv.fr : ceux
 # dont la couverture déclarée touche une commune, une intercommunalité, un département ou la
-# région de la zone. Les 15 réseaux Citiz forment une liste fixe, la même que celle de
+# région de la zone, et ceux déclarés pour toute la France (Clem, Dott), dont on garde ce
+# qui est dans la zone ou près. Getaround publie un système par ville, plus de 3 700 : il
+# n'est pas chargé. Les 15 réseaux Citiz forment une liste fixe, la même que celle de
 # 04_collecte_citiz, pour que les identifiants de stations des deux tables se rejoignent.
 # Le type d'un véhicule (vélo, trottinette, scooter) est celui que l'opérateur déclare.
 #
@@ -220,8 +222,10 @@ def nom_court(titre):
 
 
 def flux_systeme(url):
-    """Flux d'un système GBFS, {nom: adresse}, en GBFS 3.0 comme en 2.x."""
+    """Flux d'un système GBFS, {nom: adresse}, en GBFS 3.0 comme en 2.x ; None pour un manifeste."""
     donnees = session.get(url, timeout=60).json()["data"]
+    if "datasets" in donnees:  # manifeste GBFS 3.0 : un système par ville (Getaround)
+        return None
     if "feeds" not in donnees:  # GBFS 2.x : les flux sont rangés par langue
         donnees = donnees.get("fr") or next(iter(donnees.values()))
     return {f["name"]: f["url"] for f in donnees["feeds"]}
@@ -429,9 +433,14 @@ ecrire("citiz_stations", citiz)
 
 
 def touche_la_zone(jeu):
-    """Vrai si la couverture déclarée du jeu touche une commune, une intercommunalité, un département ou la région de la zone."""
+    """Vrai si la couverture déclarée du jeu touche une commune, une intercommunalité, un département ou la région de la zone.
+
+    Un système déclaré pour toute la France (Clem, Dott) est gardé : ses stations et ses
+    véhicules sont ensuite triés comme les autres, selon qu'ils sont dans la zone ou près.
+    """
     return any(
         str(z.get("insee")) in couverture_zone.get(z.get("type"), set())
+        or (z.get("type"), z.get("insee")) == ("pays", "FR")
         for z in jeu.get("covered_area") or []
     )
 
@@ -459,6 +468,10 @@ for jeu in systemes:
         flux = flux_systeme(
             max(ressources, key=lambda r: r.get("updated") or "")["url"]
         )
+        if flux is None:
+            # Getaround publie un système par ville, plus de 3 700 : non chargé.
+            print(f"{reseau} : manifeste de plusieurs systèmes, écarté")
+            continue
         if operateur is None and "system_information" in flux:
             operateur = texte(
                 lire_flux(flux, "system_information", reseau)["data"].get("name")
@@ -530,10 +543,15 @@ if sans_station:
 else:
     print("Aucun véhicule sans station dans la zone")
 synchroniser_point_sql()
-# Un système en échec est signalé après l'écriture : les tables gardent les autres, et
-# l'exécution apparaît en échec dans le suivi.
+# Un système en échec est signalé après l'écriture : les tables gardent les autres. Au-delà
+# de 5 % des systèmes, l'exécution apparaît en échec dans le suivi ; en dessous, sur une
+# région entière, quelques flux en panne sont la règle.
 if erreurs:
-    raise RuntimeError("Systèmes GBFS en échec : " + " ; ".join(erreurs))
+    print("Systèmes GBFS en échec : " + " ; ".join(erreurs))
+    if len(erreurs) > 0.05 * (len(systemes) + 1):
+        raise RuntimeError(
+            f"{len(erreurs)} systèmes GBFS en échec sur {len(systemes) + 1}"
+        )
 
 # METADATA ********************
 

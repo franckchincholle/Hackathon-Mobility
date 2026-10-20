@@ -20,20 +20,39 @@
 
 # # Arrêts de transport en commun (GTFS)
 #
-# Charge les GTFS des réseaux qui desservent la zone et construit deux tables :
+# Charge les GTFS des réseaux qui desservent la zone et construit trois tables :
 #
 # - `arrets` : un arrêt par zone d'arrêt GTFS (`parent_station`) et par réseau. Le
 #   dédoublonnage se fait en deux temps : les quais d'un même arrêt (un par sens, par voie)
 #   sont regroupés sous leur zone d'arrêt, puis deux zones d'arrêt du même réseau, au même
 #   nom et à moins de `fusion_homonymes_m`, sont fusionnées (le producteur ne leur a pas
-#   donné de parent commun).
+#   donné de parent commun). `statut_horaires` dit si les horaires du réseau sont à jour ;
+#   `nb_lignes_actives` compte les lignes qui passent au moins une fois le mardi lu, les
+#   seules à compter comme options (décision 3).
 # - `arrets_lignes` : chaque ligne qui s'arrête à chaque arrêt, avec son mode et son nombre
-#   de passages un mardi hors vacances scolaires (le bonus fréquence de la décision 3).
+#   de passages le mardi dont on lit les horaires du réseau (`jour_horaires`, le bonus
+#   fréquence de la décision 3).
+# - `reseaux` : un réseau par ligne, avec son fichier, sa période de validité, le mardi lu
+#   et son statut ; les réseaux écartés y figurent aussi, avec la raison.
 #
 # Les réseaux sont trouvés dans le catalogue de transport.data.gouv.fr : ceux dont la
 # couverture déclarée touche une commune, une intercommunalité, un département ou la région
 # de la zone. Le GTFS national de la SNCF s'y ajoute, réduit aux TER (trains et cars) : les
-# TGV, Intercités et Ouigo font de la longue distance.
+# TGV, Intercités et Ouigo font de la longue distance. Les réseaux que le catalogue classe
+# seulement scolaires sont écartés : ils sont réservés aux élèves.
+#
+# Des horaires à jour : le jour de référence est le mardi le plus chargé des
+# `semaines_reference` semaines à venir, ce qui écarte les mardis de vacances. De chaque
+# réseau, on prend le fichier qui couvre le plus de ces mardis : un réseau qui publie
+# période par période a parfois mis en ligne en dernier l'horaire des vacances. Un réseau
+# valide aujourd'hui mais sans horaire publié pour le jour de référence est lu à son mardi
+# le plus chargé (`autre mardi`). Un réseau expiré ou hors saison garde ses arrêts et ses
+# lignes avec 0 passage : sur la carte, sa zone est à marquer « données absentes ».
+#
+# Les agrégats régionaux recopient des réseaux publiés à part. Un exploitant d'un agrégat
+# dont la moitié des arrêts est à moins de 100 m d'un arrêt d'un réseau à jour publié à
+# part est une copie, écartée ; un réseau expiré dont l'agrégat donne une copie à jour est
+# remplacé par elle.
 #
 # Une ligne a un identifiant unique (`ligne_id` : réseau, exploitant et nom commercial) :
 # ses variantes et ses deux sens ne comptent qu'une fois. On garde les arrêts de la zone et
@@ -44,7 +63,6 @@
 # CELL ********************
 
 import datetime as dt
-import io
 import json
 import math
 import os
@@ -53,13 +71,16 @@ import tempfile
 import time
 import unicodedata
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 
 import notebookutils
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import requests
 from deltalake import DeltaTable, write_deltalake
 from requests.adapters import HTTPAdapter
+from scipy.spatial import cKDTree
 from urllib3.util.retry import Retry
 
 try:
@@ -101,6 +122,14 @@ NOMS_PUBLIES = {
     "Réseau interurbain liO Occitanie": "lio",
 }
 PREFIXES = ("Réseau urbain et scolaire ", "Réseau urbain ", "Réseau interurbain ")
+# Mardis passés où l'on cherche les horaires d'un réseau valide qui n'a pas encore publié
+# ceux du jour de référence.
+SEMAINES_PASSEES = 26
+# Un exploitant d'agrégat dont PART_COPIE des arrêts sont à moins de COPIE_M d'un arrêt
+# d'un réseau publié à part est une copie de ce réseau.
+COPIE_M = 100
+PART_COPIE = 0.5
+STATUTS_A_JOUR = ("jour de référence", "autre mardi")
 print(f"Tables écrites dans le Lakehouse {LAKEHOUSE}")
 
 # METADATA ********************
@@ -121,15 +150,11 @@ acces = {
 jour = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
 dossier_local = tempfile.mkdtemp()
 # Quatre essais espacés de 2, 4 puis 8 s : les serveurs coupent parfois une connexion.
+REPRISES = Retry(total=4, backoff_factor=2, status_forcelist=[429, 500, 502, 503, 504])
 session = requests.Session()
-session.mount(
-    "https://",
-    HTTPAdapter(
-        max_retries=Retry(
-            total=4, backoff_factor=2, status_forcelist=[429, 500, 502, 503, 504]
-        )
-    ),
-)
+session.mount("https://", HTTPAdapter(max_retries=REPRISES))
+# Durée maximale du téléchargement d'une archive GTFS.
+DELAI_S = 300
 
 
 def api_fabric(methode, chemin, **options):
@@ -219,15 +244,31 @@ def nom_court(titre):
 
 
 def telecharger(reseau, url):
-    """Archive GTFS du jour, gardée brute dans Files/brut/gtfs/<jour>/."""
+    """Archive GTFS du jour, copiée sur le disque du notebook ; chemin de la copie.
+
+    L'archive reste sur le disque : sur une région entière, les garder toutes en mémoire
+    pèserait inutilement. Les téléchargements tournent à plusieurs en parallèle, chacun avec sa
+    session. Un serveur peut garder la connexion ouverte sans presque rien envoyer : au-delà
+    de DELAI_S secondes, le réseau passe en échec plutôt que de bloquer tout le notebook.
+    """
     copie = os.path.join(dossier_local, f"{reseau}.zip")
     # Une archive coupée en cours de lecture échappe aux reprises de la session : trois
     # essais de plus, espacés de 5 puis 10 s.
     for essai in range(3):
+        debut = time.monotonic()
         try:
-            reponse = session.get(url, timeout=600)
-            reponse.raise_for_status()
-            break
+            with requests.Session() as propre:
+                propre.mount("https://", HTTPAdapter(max_retries=REPRISES))
+                with propre.get(url, timeout=(30, 120), stream=True) as reponse:
+                    reponse.raise_for_status()
+                    with open(copie, "wb") as fichier:
+                        for morceau in reponse.iter_content(1 << 16):
+                            fichier.write(morceau)
+                            if time.monotonic() - debut > DELAI_S:
+                                raise TimeoutError(
+                                    f"téléchargement de plus de {DELAI_S} s"
+                                )
+            return copie
         except (
             requests.exceptions.ChunkedEncodingError,
             requests.exceptions.ConnectionError,
@@ -235,12 +276,15 @@ def telecharger(reseau, url):
             if essai == 2:
                 raise
             time.sleep(5 * (essai + 1))
-    with open(copie, "wb") as fichier:
-        fichier.write(reponse.content)
-    notebookutils.fs.cp(
-        f"file:{copie}", f"{racine}/Files/brut/gtfs/{jour}/{reseau}.zip"
-    )
-    return zipfile.ZipFile(io.BytesIO(reponse.content))
+
+
+def telecharger_sans_lever(reseau_et_source):
+    """telecharger pour un passage en parallèle : l'erreur est rendue, pas levée."""
+    reseau, source = reseau_et_source
+    try:
+        return telecharger(reseau, source["url"])
+    except Exception as e:
+        return e
 
 
 def table_gtfs(archive, nom, colonnes=None):
@@ -274,10 +318,11 @@ def services_actifs(g, date):
     actifs = set()
     if g["calendar"] is not None:
         c = g["calendar"]
+        # Une période sans date (fichier mal formé) ne roule jamais.
         actifs = set(
             c.loc[
-                (c["start_date"] <= numero)
-                & (c["end_date"] >= numero)
+                (c["start_date"].fillna("99999999") <= numero)
+                & (c["end_date"].fillna("00000000") >= numero)
                 & (c[JOURS[date.weekday()]] == "1"),
                 "service_id",
             ]
@@ -287,6 +332,21 @@ def services_actifs(g, date):
         actifs |= set(d.loc[d["exception_type"] == "1", "service_id"])
         actifs -= set(d.loc[d["exception_type"] == "2", "service_id"])
     return actifs
+
+
+def periode(g):
+    """Premier et dernier jour que couvre le calendrier du GTFS ; (None, None) s'il est vide."""
+    bornes = []
+    if g["calendar"] is not None:
+        bornes += [g["calendar"]["start_date"].min(), g["calendar"]["end_date"].max()]
+    if g["calendar_dates"] is not None:
+        bornes += [g["calendar_dates"]["date"].min(), g["calendar_dates"]["date"].max()]
+    dates = [
+        dt.datetime.strptime(b.strip(), "%Y%m%d").date()
+        for b in bornes
+        if isinstance(b, str) and len(b.strip()) == 8
+    ]
+    return (min(dates), max(dates)) if dates else (None, None)
 
 
 def mode(route_type):
@@ -434,26 +494,102 @@ def touche_la_zone(jeu):
     )
 
 
-catalogue = session.get(CATALOGUE, timeout=300).json()
-GTFS = {}
-for jeu in catalogue:
-    if jeu.get("type") != "public-transit" or not touche_la_zone(jeu):
-        continue
-    ressources = [
+aujourd_hui = dt.date.today()
+mardis = [
+    aujourd_hui + dt.timedelta(days=(1 - aujourd_hui.weekday()) % 7 + 7 * k)
+    for k in range(SEMAINES)
+]
+
+
+def gtfs_disponibles(jeu):
+    return [
         r
         for r in jeu.get("resources", [])
         if r.get("format") == "GTFS" and r.get("is_available", True)
     ]
-    if not ressources:
-        print(f"Sans GTFS, écarté : {jeu['title']}")
+
+
+def mardis_couverts(ressource):
+    """Nombre de mardis à venir que couvrent les dates de validité publiées au catalogue."""
+    validite = ressource.get("metadata") or {}
+    if not (validite.get("start_date") and validite.get("end_date")):
+        return 0
+    debut = dt.date.fromisoformat(validite["start_date"])
+    fin = dt.date.fromisoformat(validite["end_date"])
+    return sum(debut <= m <= fin for m in mardis)
+
+
+def ressource_retenue(ressources):
+    """Le GTFS d'un jeu qui couvre le plus de mardis à venir.
+
+    Un réseau peut publier un fichier par période : le plus récent est parfois l'horaire des
+    vacances. À égalité, la fin de validité la plus tardive puis la mise à jour la plus
+    récente l'emportent. Un fichier des seules lignes scolaires ne sert que s'il est seul.
+    """
+    regulieres = [
+        r for r in ressources if "scolaire" not in (r.get("title") or "").lower()
+    ]
+    return max(
+        regulieres or ressources,
+        key=lambda r: (
+            mardis_couverts(r),
+            (r.get("metadata") or {}).get("end_date") or "",
+            r.get("updated") or "",
+        ),
+    )
+
+
+catalogue = session.get(CATALOGUE, timeout=300).json()
+GTFS, ecartes = {}, []
+for jeu in catalogue:
+    if jeu.get("type") != "public-transit" or not touche_la_zone(jeu):
         continue
     reseau = nom_court(jeu["title"])
     while reseau in GTFS:
         reseau += "_2"
-    # Un jeu peut publier plusieurs GTFS (périodes, exports) : on prend le plus récent.
-    GTFS[reseau] = max(ressources, key=lambda r: r.get("updated") or "")["url"]
-GTFS.update(GTFS_NATIONAUX)
+    description = {
+        "titre": jeu["title"],
+        "page": jeu.get("page_url"),
+        "sous_types": ",".join(jeu.get("sub_types") or []),
+        "agregat": jeu["title"].startswith("Agrégat"),
+        "couverture": ", ".join(
+            f"{z.get('nom')} ({z.get('type')} {z.get('insee')})"
+            for z in jeu.get("covered_area") or []
+        ),
+    }
+    if not gtfs_disponibles(jeu):
+        print(f"Sans GTFS, écarté : {jeu['title']}")
+        ecartes.append(
+            {"reseau": reseau, **description, "statut_horaires": "sans GTFS"}
+        )
+        continue
+    # Le catalogue classe « school » seulement les réseaux réservés aux élèves.
+    if (jeu.get("sub_types") or []) == ["school"]:
+        print(f"Réseau scolaire, écarté : {jeu['title']}")
+        ecartes.append(
+            {"reseau": reseau, **description, "statut_horaires": "scolaire seulement"}
+        )
+        continue
+    # Les dates de validité de chaque fichier ne sont que dans la fiche détaillée du jeu.
+    fiche = session.get(f"{CATALOGUE}/{jeu['id']}", timeout=120).json()
+    choisie = ressource_retenue(gtfs_disponibles(fiche) or gtfs_disponibles(jeu))
+    GTFS[reseau] = {
+        **description,
+        "url": choisie["url"],
+        "fichier": choisie.get("title"),
+    }
+for reseau, url in GTFS_NATIONAUX.items():
+    GTFS[reseau] = {
+        "titre": "Réseau SNCF TGV, Intercités et TER, réduit aux TER",
+        "page": url,
+        "sous_types": "",
+        "agregat": False,
+        "couverture": "France (pays FR)",
+        "url": url,
+        "fichier": None,
+    }
 print(f"{len(GTFS)} réseaux : {', '.join(sorted(GTFS))}")
+print(f"{sum(s['agregat'] for s in GTFS.values())} agrégats régionaux")
 
 # METADATA ********************
 
@@ -464,29 +600,54 @@ print(f"{len(GTFS)} réseaux : {', '.join(sorted(GTFS))}")
 
 # CELL ********************
 
+
+def ecarte(reseau, statut):
+    """Ligne de la table reseaux pour un réseau qui ne donne ni arrêt ni ligne."""
+    source = {k: v for k, v in GTFS[reseau].items() if k != "url"}
+    return {"reseau": reseau, **source, "statut_horaires": statut}
+
+
+# Huit téléchargements à la fois ; les archives sont ensuite lues une par une.
+with ThreadPoolExecutor(max_workers=8) as executeur:
+    copies = dict(zip(GTFS, executeur.map(telecharger_sans_lever, GTFS.items())))
+print(
+    f"{sum(not isinstance(c, Exception) for c in copies.values())} archives téléchargées sur {len(copies)}"
+)
+
 gtfs, erreurs = {}, []
-for reseau, url in GTFS.items():
+for reseau, source in GTFS.items():
     try:
-        archive = telecharger(reseau, url)
+        if isinstance(copies[reseau], Exception):
+            raise copies[reseau]
+        notebookutils.fs.cp(
+            f"file:{copies[reseau]}", f"{racine}/Files/brut/gtfs/{jour}/{reseau}.zip"
+        )
+        archive = zipfile.ZipFile(copies[reseau])
+        # stop_times.txt, de loin le plus gros fichier, n'est lu qu'au moment de compter
+        # les passages, un réseau à la fois.
         g = {
+            "archive": archive,
             "stops": table_gtfs(archive, "stops.txt"),
             "routes": table_gtfs(archive, "routes.txt"),
             "trips": table_gtfs(
                 archive, "trips.txt", ["trip_id", "route_id", "service_id"]
             ),
-            "stop_times": table_gtfs(archive, "stop_times.txt", ["trip_id", "stop_id"]),
             "calendar": table_gtfs(archive, "calendar.txt"),
             "calendar_dates": table_gtfs(archive, "calendar_dates.txt"),
         }
-        manquants = [
-            nom for nom in ("stops", "routes", "trips", "stop_times") if g[nom] is None
-        ]
+        manquants = [nom for nom in ("stops", "routes", "trips") if g[nom] is None]
+        if "stop_times.txt" not in archive.namelist():
+            manquants.append("stop_times")
         if manquants:
             raise ValueError(f"GTFS sans {', '.join(manquants)}")
         if g["stops"].empty or g["trips"].empty:
             print(f"{reseau} : GTFS publié sans arrêt ni course, écarté")
+            ecartes.append(ecarte(reseau, "GTFS vide"))
             continue
         if reseau in FILTRE_QUAIS:
+            g["stop_times"] = table_gtfs(
+                archive, "stop_times.txt", ["trip_id", "stop_id"]
+            )
             g["stop_times"] = g["stop_times"][
                 g["stop_times"]["stop_id"].str.contains(
                     FILTRE_QUAIS[reseau], regex=False
@@ -502,24 +663,66 @@ for reseau, url in GTFS.items():
     except Exception as e:
         erreurs.append(f"{reseau} : {e!r}")
         print(f"{reseau} écarté : {e!r}")
+        ecartes.append(ecarte(reseau, "en échec"))
 if not gtfs:
     raise RuntimeError("Aucun GTFS chargé : " + " ; ".join(erreurs))
 
-aujourd_hui = dt.date.today()
-mardis = [
-    aujourd_hui + dt.timedelta(days=(1 - aujourd_hui.weekday()) % 7 + 7 * k)
-    for k in range(SEMAINES)
-]
-courses = {
-    m: sum(
-        g["trips"]["service_id"].isin(services_actifs(g, m)).sum()
-        for g in gtfs.values()
-    )
-    for m in mardis
-}
-jour_reference = max(mardis, key=courses.get)
-print("Courses par mardi :", {m.isoformat(): int(n) for m, n in courses.items()})
+
+def courses_du(g, mardi):
+    return int(g["trips"]["service_id"].isin(services_actifs(g, mardi)).sum())
+
+
+def ecarter(reseau, erreur):
+    """Écarte un réseau dont le calendrier ne se lit pas, sans arrêter le notebook."""
+    erreurs.append(f"{reseau} : {erreur!r}")
+    print(f"{reseau} écarté : {erreur!r}")
+    ecartes.append(ecarte(reseau, "en échec"))
+    del gtfs[reseau]
+
+
+courses, periodes = {}, {}
+for reseau, g in list(gtfs.items()):
+    try:
+        courses[reseau] = {m: courses_du(g, m) for m in mardis}
+        periodes[reseau] = periode(g)
+    except Exception as e:
+        ecarter(reseau, e)
+total = {m: sum(courses[r][m] for r in gtfs) for m in mardis}
+jour_reference = max(mardis, key=total.get)
+print("Courses par mardi :", {m.isoformat(): n for m, n in total.items()})
 print(f"Jour de référence : mardi {jour_reference.isoformat()}")
+passes = [mardis[0] - dt.timedelta(weeks=k) for k in range(1, SEMAINES_PASSEES + 1)]
+
+
+def jour_du_reseau(reseau, g):
+    """Mardi dont on lit les horaires du réseau (None s'il n'en a pas), et son statut."""
+    if courses[reseau][jour_reference]:
+        return jour_reference, "jour de référence"
+    debut, fin = periodes[reseau]
+    if fin is None or fin < aujourd_hui:
+        return None, "expiré"
+    if debut > aujourd_hui or "seasonal" in GTFS[reseau]["sous_types"]:
+        return None, "hors saison"
+    # Valide aujourd'hui, mais les horaires du jour de référence ne sont pas encore
+    # publiés : son mardi le plus chargé parmi ceux qu'il couvre, ce qui écarte les
+    # mardis de vacances.
+    candidats = {m: courses_du(g, m) for m in passes + mardis if debut <= m <= fin}
+    meilleur = max(candidats, key=candidats.get, default=None)
+    if meilleur is None or not candidats[meilleur]:
+        return None, "sans service le mardi"
+    return meilleur, "autre mardi"
+
+
+jours = {}
+for reseau, g in list(gtfs.items()):
+    try:
+        jours[reseau] = jour_du_reseau(reseau, g)
+    except Exception as e:
+        ecarter(reseau, e)
+for statut in sorted({s for _, s in jours.values()}):
+    print(
+        f"{statut} : {', '.join(sorted(r for r, (_, s) in jours.items() if s == statut))}"
+    )
 
 # METADATA ********************
 
@@ -531,8 +734,8 @@ print(f"Jour de référence : mardi {jour_reference.isoformat()}")
 # CELL ********************
 
 
-def arrets_et_lignes(reseau, g):
-    """Arrêts dédoublonnés d'un réseau et lignes qui s'y arrêtent, avec leurs passages du jour."""
+def arrets_et_lignes(reseau, g, jour_horaires):
+    """Arrêts dédoublonnés d'un réseau et lignes qui s'y arrêtent, avec leurs passages du mardi jour_horaires (aucun si None)."""
     stops = g["stops"].copy()
     type_lieu = colonne(stops, "location_type", "0").fillna("0").replace("", "0")
     # Un quai (location_type 0) est rattaché à sa zone d'arrêt (location_type 1) si elle
@@ -556,14 +759,20 @@ def arrets_et_lignes(reseau, g):
     routes["libelle"] = colonne(routes, "route_long_name")
     routes["couleur"] = colonne(routes, "route_color")
     routes["mode"] = routes["route_type"].map(mode)
+    routes["exploitant"] = exploitant
 
-    passages = g["stop_times"].merge(g["trips"], on="trip_id")
+    stop_times = g.pop("stop_times", None)
+    if stop_times is None:
+        stop_times = table_gtfs(g["archive"], "stop_times.txt", ["trip_id", "stop_id"])
+    passages = stop_times.merge(g["trips"], on="trip_id")
+    del stop_times
     passages["arret"] = passages["stop_id"].map(quais.set_index("stop_id")["arret"])
     passages["ligne_id"] = passages["route_id"].map(
         routes.set_index("route_id")["ligne_id"]
     )
     passages = passages.dropna(subset=["arret", "ligne_id"])
-    du_jour = passages[passages["service_id"].isin(services_actifs(g, jour_reference))]
+    actifs = services_actifs(g, jour_horaires) if jour_horaires else set()
+    du_jour = passages[passages["service_id"].isin(actifs)]
     lignes = (
         passages[["arret", "ligne_id"]]
         .drop_duplicates()
@@ -578,12 +787,15 @@ def arrets_et_lignes(reseau, g):
     )
     lignes["passages_jour"] = lignes["passages_jour"].fillna(0).astype("int64")
     attributs = routes.drop_duplicates("ligne_id").set_index("ligne_id")
-    for champ in ("ligne", "libelle", "mode", "couleur"):
+    for champ in ("ligne", "libelle", "mode", "couleur", "exploitant"):
         lignes[champ] = lignes["ligne_id"].map(attributs[champ])
     lignes["reseau"] = reseau
     lignes["arret_id"] = reseau + ":" + lignes.pop("arret")
 
     # L'arrêt prend le nom et la position de sa zone d'arrêt, ou de son quai s'il est seul.
+    # Une zone d'arrêt publiée sans position prend celle de son premier quai qui en a une.
+    for colonne_gps in ("stop_lat", "stop_lon"):
+        quais[colonne_gps] = pd.to_numeric(quais[colonne_gps], errors="coerce")
     arrets = quais.groupby("arret").agg(
         nb_quais=("stop_id", "size"),
         nom=("stop_name", "first"),
@@ -591,32 +803,116 @@ def arrets_et_lignes(reseau, g):
         lon=("stop_lon", "first"),
     )
     connus = arrets.index.isin(zones_arret.index)
-    for champ, source in (
-        ("nom", "stop_name"),
-        ("lat", "stop_lat"),
-        ("lon", "stop_lon"),
-    ):
-        arrets.loc[connus, champ] = zones_arret.loc[
-            arrets.index[connus], source
-        ].to_numpy()
+    arrets.loc[connus, "nom"] = zones_arret.loc[
+        arrets.index[connus], "stop_name"
+    ].to_numpy()
+    for champ, source in (("lat", "stop_lat"), ("lon", "stop_lon")):
+        zone = pd.to_numeric(
+            zones_arret.loc[arrets.index[connus], source], errors="coerce"
+        ).to_numpy()
+        arrets.loc[connus, champ] = np.where(
+            np.isnan(zone), arrets.loc[connus, champ].to_numpy(), zone
+        )
     arrets = arrets.reset_index()
     arrets["arret_id"] = reseau + ":" + arrets.pop("arret")
     arrets["reseau"] = reseau
-    arrets[["lat", "lon"]] = arrets[["lat", "lon"]].astype(float)
+    # Sans position valable (vide, ou 0, 0), un arrêt ne se place pas sur la grille : il
+    # est écarté avec ses passages.
+    places = (
+        arrets["lat"].between(-90, 90)
+        & arrets["lon"].between(-180, 180)
+        & ~((arrets["lat"] == 0) & (arrets["lon"] == 0))
+    )
+    arrets = arrets[places]
+    lignes = lignes[lignes["arret_id"].isin(arrets["arret_id"])]
     # Seuls les arrêts desservis par au moins une ligne sont gardés.
     return arrets[arrets["arret_id"].isin(lignes["arret_id"])], lignes
 
 
+def rang(reseau):
+    """Ordre de lecture : réseaux à jour publiés à part, puis agrégats, puis les autres.
+
+    Un agrégat est comparé aux réseaux à jour déjà lus ; un réseau expiré, aux agrégats.
+    """
+    if GTFS[reseau]["agregat"]:
+        return 1
+    return 0 if jours[reseau][1] in STATUTS_A_JOUR else 2
+
+
+arbres = {}
+
+
+def arbre(nom, points):
+    """Index des points (x, y) d'un groupe de réseaux, construit au premier besoin."""
+    if nom not in arbres:
+        arbres[nom] = cKDTree(np.vstack(points)) if points else None
+    return arbres[nom]
+
+
+def part_proche(xy, index):
+    """Part des points xy à moins de COPIE_M d'un point de l'index (0 sans index)."""
+    if index is None or not len(xy):
+        return 0.0
+    distances, _ = index.query(xy, distance_upper_bound=COPIE_M)
+    return float(np.isfinite(distances).mean())
+
+
 tous_arrets, toutes_lignes = [], []
-for reseau, g in gtfs.items():
+points_a_jour, points_agregats = [], []
+
+
+def sans_copies(reseau, arrets_reseau, lignes_reseau):
+    """Retire d'un agrégat les exploitants dont la plupart des arrêts sont ceux d'un réseau à jour publié à part."""
+    index = arbre("à jour", points_a_jour)
+    position = arrets_reseau.set_index("arret_id")[["x_3035", "y_3035"]]
+    copies = [
+        e
+        for e, lignes_exploitant in lignes_reseau.groupby("exploitant")
+        if part_proche(
+            position.loc[lignes_exploitant["arret_id"].unique()].to_numpy(), index
+        )
+        >= PART_COPIE
+    ]
+    GTFS[reseau]["exploitants_copies"] = len(copies)
+    print(
+        f"{reseau} : {len(copies)} exploitants sur {lignes_reseau['exploitant'].nunique()} déjà publiés à part, écartés"
+    )
+    lignes_reseau = lignes_reseau[~lignes_reseau["exploitant"].isin(copies)]
+    arrets_reseau = arrets_reseau[
+        arrets_reseau["arret_id"].isin(lignes_reseau["arret_id"])
+    ]
+    return arrets_reseau, lignes_reseau
+
+
+for reseau in sorted(gtfs, key=lambda r: (rang(r), r)):
+    g = gtfs.pop(reseau)
+    jour_horaires, statut = jours[reseau]
+    # Un réseau qui casse le calcul est écarté, sans arrêter les autres.
     try:
-        arrets_reseau, lignes_reseau = arrets_et_lignes(reseau, g)
-        tous_arrets.append(arrets_reseau)
-        toutes_lignes.append(lignes_reseau)
+        arrets_reseau, lignes_reseau = arrets_et_lignes(reseau, g, jour_horaires)
+        arrets_reseau = placer(arrets_reseau)
+        xy = arrets_reseau[["x_3035", "y_3035"]].to_numpy()
+        if GTFS[reseau]["agregat"]:
+            arrets_reseau, lignes_reseau = sans_copies(
+                reseau, arrets_reseau, lignes_reseau
+            )
     except Exception as e:
         erreurs.append(f"{reseau} : {e!r}")
         print(f"{reseau} écarté : {e!r}")
-arrets = placer(pd.concat(tous_arrets, ignore_index=True))
+        jours[reseau] = (None, "en échec")
+        continue
+    if GTFS[reseau]["agregat"]:
+        if statut in STATUTS_A_JOUR:
+            points_agregats.append(arrets_reseau[["x_3035", "y_3035"]].to_numpy())
+    elif statut in STATUTS_A_JOUR:
+        points_a_jour.append(xy)
+    elif part_proche(xy, arbre("agrégats", points_agregats)) >= PART_COPIE:
+        print(f"{reseau} : {statut}, remplacé par la copie à jour d'un agrégat")
+        jours[reseau] = (None, "remplacé par un agrégat")
+        continue
+    tous_arrets.append(arrets_reseau)
+    toutes_lignes.append(lignes_reseau)
+arrets = pd.concat(tous_arrets, ignore_index=True)
 arrets_lignes = pd.concat(toutes_lignes, ignore_index=True)
 
 # METADATA ********************
@@ -692,7 +988,12 @@ arrets = garder_zone(arrets)
 arrets_lignes = arrets_lignes[
     arrets_lignes["arret_id"].isin(arrets["arret_id"])
 ].reset_index(drop=True)
-arrets_lignes["jour_reference"] = pd.Timestamp(jour_reference)
+# Les dates s'écrivent en type date : le point SQL ignore les horodatages sans fuseau.
+DATE = pd.ArrowDtype(pa.date32())
+arrets["statut_horaires"] = arrets["reseau"].map({r: s for r, (_, s) in jours.items()})
+arrets_lignes["jour_horaires"] = (
+    arrets_lignes["reseau"].map({r: j for r, (j, _) in jours.items()}).astype(DATE)
+)
 
 # METADATA ********************
 
@@ -708,6 +1009,13 @@ resume = arrets_lignes.groupby("arret_id").agg(
     nb_lignes=("ligne_id", "nunique"),
     passages_jour=("passages_jour", "sum"),
 )
+# Les lignes qui passent au moins une fois le mardi lu : les seules à compter comme options.
+resume["nb_lignes_actives"] = (
+    arrets_lignes[arrets_lignes["passages_jour"] > 0]
+    .groupby("arret_id")["ligne_id"]
+    .nunique()
+    .reindex(resume.index, fill_value=0)
+)
 arrets = arrets.merge(resume, left_on="arret_id", right_index=True)
 arrets = arrets[
     [
@@ -716,7 +1024,9 @@ arrets = arrets[
         "nom",
         "modes",
         "nb_lignes",
+        "nb_lignes_actives",
         "passages_jour",
+        "statut_horaires",
         "nb_quais",
         "dans_zone",
         "lat",
@@ -736,16 +1046,63 @@ arrets_lignes = arrets_lignes[
         "mode",
         "couleur",
         "passages_jour",
-        "jour_reference",
+        "jour_horaires",
     ]
 ]
+
+# Un réseau par ligne, écartés compris : d'où viennent ses horaires et ce qu'il apporte.
+bilan = arrets_lignes.groupby("reseau").agg(
+    lignes=("ligne_id", "nunique"), passages=("passages_jour", "sum")
+)
+bilan["arrets"] = arrets.groupby("reseau").size()
+reseaux = pd.DataFrame(
+    [
+        {
+            "reseau": r,
+            **{k: v for k, v in GTFS[r].items() if k != "url"},
+            "debut_validite": periodes[r][0],
+            "fin_validite": periodes[r][1],
+            "jour_horaires": jour_r,
+            "statut_horaires": statut_r,
+        }
+        for r, (jour_r, statut_r) in jours.items()
+    ]
+    + ecartes
+).merge(bilan, left_on="reseau", right_index=True, how="left")
+reseaux = reseaux.reindex(
+    columns=[
+        "reseau",
+        "titre",
+        "statut_horaires",
+        "jour_horaires",
+        "debut_validite",
+        "fin_validite",
+        "arrets",
+        "lignes",
+        "passages",
+        "sous_types",
+        "agregat",
+        "exploitants_copies",
+        "couverture",
+        "fichier",
+        "page",
+    ]
+)
+for champ in ("jour_horaires", "debut_validite", "fin_validite"):
+    reseaux[champ] = reseaux[champ].astype(DATE)
+for champ in ("arrets", "lignes", "passages", "exploitants_copies"):
+    reseaux[champ] = reseaux[champ].astype("Int64")
+reseaux["agregat"] = reseaux["agregat"].astype(bool)
 
 # Contrôles : ils arrêtent le notebook si les tables n'ont pas la forme attendue.
 assert arrets["arret_id"].is_unique
 assert not arrets_lignes.duplicated(["arret_id", "ligne_id"]).any()
 assert arrets_lignes["arret_id"].isin(arrets["arret_id"]).all()
+assert reseaux["reseau"].is_unique
 ecrire("arrets", arrets)
 ecrire("arrets_lignes", arrets_lignes)
+ecrire("reseaux", reseaux)
+print(reseaux["statut_horaires"].value_counts().to_string())
 print(
     arrets.groupby("reseau")
     .agg(
@@ -761,10 +1118,13 @@ print(
     .to_string()
 )
 synchroniser_point_sql()
-# Un réseau en échec est signalé après l'écriture : les tables gardent les autres, et
-# l'exécution apparaît en échec dans le suivi.
+# Un réseau en échec est signalé après l'écriture : les tables gardent les autres, et la
+# table reseaux le marque « en échec ». Au-delà de 5 % des réseaux, l'exécution apparaît en
+# échec dans le suivi ; en dessous, sur une région entière, quelques flux cassés sont la règle.
 if erreurs:
-    raise RuntimeError("Réseaux en échec : " + " ; ".join(erreurs))
+    print("Réseaux en échec : " + " ; ".join(erreurs))
+    if len(erreurs) > 0.05 * len(GTFS):
+        raise RuntimeError(f"{len(erreurs)} réseaux en échec sur {len(GTFS)}")
 
 # METADATA ********************
 

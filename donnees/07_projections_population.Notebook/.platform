@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "07_projections_population",
+    "description": "Projections de population de l'INSEE par département, 2018-2070, scénario central"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "fd13724a-7a5c-483c-aa81-a27ca05f004d"
+  }
+}

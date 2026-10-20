@@ -31,10 +31,17 @@
 # - `projets_lignes` : une ligne par projet, avec sa source.
 #
 # Aucun réseau ne publie ses projets en données ouvertes : les stations et leurs
-# coordonnées viennent de Wikidata (licence CC0), les dates des annonces officielles citées
-# dans `PROJETS`. Le prolongement de la ligne B garde l'identifiant de la ligne B existante
-# (`ligne_id` de Tisséo) : un carreau déjà proche de la ligne B ne gagne pas d'option. Les
-# notebooks 01 et 02 doivent avoir tourné avant, avec le même jeu de valeurs.
+# coordonnées viennent de Wikidata (licence CC0). Deux sources :
+#
+# - les projets vérifiés à la main dans `PROJETS`, avec les dates des annonces officielles.
+#   Le prolongement de la ligne B garde l'identifiant de la ligne B existante (`ligne_id`
+#   de Tisséo) : un carreau déjà proche de la ligne B ne gagne pas d'option ;
+# - partout ailleurs, les stations de métro, de tram, de bus et de train que Wikidata
+#   marque « en construction » en France, avec leur ligne et leur date d'ouverture quand
+#   Wikidata les donne. C'est une liste tenue par des bénévoles, sans garantie d'être
+#   complète ; un projet décidé mais pas encore en chantier n'y figure pas.
+#
+# Les notebooks 01 et 02 doivent avoir tourné avant, avec le même jeu de valeurs.
 
 # CELL ********************
 
@@ -100,6 +107,14 @@ PROJETS = [
         "source": "Wikidata Q56309372 et Q56309366 ; Ville de Toulouse : 2,7 km jusqu'à Labège, chantier mené avec la ligne C",
     },
 ]
+# Stations en construction ailleurs en France : la famille Wikidata donne le mode ; une
+# station de métro est aussi une gare, d'où l'ordre de priorité.
+FAMILLES_STATIONS = {
+    "Q928830": "metro",
+    "Q2175765": "tram",
+    "Q55488": "train",
+    "Q953806": "bus",
+}
 print(f"Tables écrites dans le Lakehouse {LAKEHOUSE}")
 
 # METADATA ********************
@@ -222,15 +237,8 @@ def stations_wikidata(projet):
         f"SELECT ?station ?nom ?coord WHERE {{ {selection} ?station wdt:P625 ?coord . "
         f'OPTIONAL {{ ?station rdfs:label ?nom . FILTER(LANG(?nom) = "fr") }} }}'
     )
-    reponse = session.get(
-        WIKIDATA,
-        params={"query": requete},
-        headers={"Accept": "application/sparql-results+json"},
-        timeout=120,
-    )
-    reponse.raise_for_status()
     lignes = []
-    for r in reponse.json()["results"]["bindings"]:
+    for r in sparql(requete):
         lon, lat = r["coord"]["value"].removeprefix("Point(").removesuffix(")").split()
         lignes.append(
             {
@@ -241,6 +249,67 @@ def stations_wikidata(projet):
             }
         )
     return pd.DataFrame(lignes).drop_duplicates("wikidata")
+
+
+def sparql(requete):
+    """Résultats d'une requête SPARQL sur Wikidata."""
+    reponse = session.get(
+        WIKIDATA,
+        params={"query": requete},
+        headers={"Accept": "application/sparql-results+json"},
+        timeout=120,
+    )
+    reponse.raise_for_status()
+    return reponse.json()["results"]["bindings"]
+
+
+def qid(r, champ):
+    """Identifiant Wikidata (Q...) d'un champ de résultat, ou None."""
+    return r[champ]["value"].rsplit("/", 1)[-1] if champ in r else None
+
+
+def stations_en_construction():
+    """Stations que Wikidata marque « en construction » en France, une ligne par station et par ligne."""
+    familles = " ".join(f"wd:{q}" for q in FAMILLES_STATIONS)
+    requete = f"""
+    SELECT ?station ?nom ?coord ?famille ?ligne ?nom_ligne ?ouverture ?ouverture_ligne WHERE {{
+      VALUES ?famille {{ {familles} }}
+      ?station wdt:P17 wd:Q142 ; wdt:P5817 wd:Q12377751 ; wdt:P625 ?coord ;
+               wdt:P31/wdt:P279* ?famille .
+      OPTIONAL {{ ?station rdfs:label ?nom . FILTER(LANG(?nom) = "fr") }}
+      OPTIONAL {{ ?station wdt:P729 ?ouverture }}
+      OPTIONAL {{
+        ?station wdt:P81 ?ligne .
+        OPTIONAL {{ ?ligne rdfs:label ?nom_ligne . FILTER(LANG(?nom_ligne) = "fr") }}
+        OPTIONAL {{ ?ligne wdt:P729 ?ouverture_ligne }}
+      }}
+    }}"""
+    priorite = list(FAMILLES_STATIONS)
+    lignes = []
+    for r in sparql(requete):
+        lon, lat = r["coord"]["value"].removeprefix("Point(").removesuffix(")").split()
+        ouverture = (r.get("ouverture") or r.get("ouverture_ligne") or {}).get("value")
+        lignes.append(
+            {
+                "wikidata": qid(r, "station"),
+                "nom": r.get("nom", {}).get("value"),
+                "rang": priorite.index(qid(r, "famille")),
+                "ligne_wikidata": qid(r, "ligne"),
+                "nom_ligne": r.get("nom_ligne", {}).get("value"),
+                "annee_mise_en_service": int(ouverture[:4]) if ouverture else None,
+                "lat": float(lat),
+                "lon": float(lon),
+            }
+        )
+    if not lignes:
+        return pd.DataFrame()
+    trouvees = (
+        pd.DataFrame(lignes)
+        .sort_values(["rang", "annee_mise_en_service"])
+        .drop_duplicates(["wikidata", "ligne_wikidata"])
+    )
+    trouvees["mode"] = trouvees["rang"].map(lambda k: FAMILLES_STATIONS[priorite[k]])
+    return trouvees.drop(columns="rang")
 
 
 # METADATA ********************
@@ -383,7 +452,40 @@ for projet in PROJETS:
     )
     print(f"{projet['projet']} : {len(s)} stations dans Wikidata, ligne {ligne_id}")
 
+# Ailleurs en France : les stations en construction de Wikidata, hors des projets vérifiés.
+# Une station sans ligne connue forme son propre projet.
+connues = set(pd.concat(stations)["wikidata"])
+autres = stations_en_construction()
+if not autres.empty:
+    autres = autres[~autres["wikidata"].isin(connues)].copy()
+    autres["projet"] = "wikidata_" + autres["ligne_wikidata"].fillna(autres["wikidata"])
+    autres["ligne_id"] = "projet:" + autres["projet"]
+    autres["arret_id"] = "projet_" + autres["projet"] + ":" + autres["wikidata"]
+    autres["nom"] = autres["nom"].fillna(autres["wikidata"])
+    autres["ligne"] = autres["nom_ligne"].fillna(autres["nom"])
+    stations.append(autres.drop(columns=["ligne_wikidata", "nom_ligne"]))
+    for projet, groupe in autres.groupby("projet"):
+        lignes.append(
+            {
+                "ligne_id": f"projet:{projet}",
+                "projet": projet,
+                "nom": groupe["ligne"].iloc[0],
+                "ligne": groupe["ligne"].iloc[0],
+                "mode": groupe["mode"].iloc[0],
+                "annee_mise_en_service": groupe["annee_mise_en_service"].min(),
+                # Wikidata ne dit pas si la ligne existe déjà (prolongement) ou non.
+                "nouvelle_ligne": None,
+                "source": "Wikidata : stations en construction (P5817), ligne (P81), ouverture (P729)",
+            }
+        )
+    print(
+        f"Wikidata : {autres['wikidata'].nunique()} autres stations en construction en France, sur {autres['projet'].nunique()} projets"
+    )
+
 projets_arrets = garder_zone(placer(pd.concat(stations, ignore_index=True)))
+projets_arrets["annee_mise_en_service"] = projets_arrets[
+    "annee_mise_en_service"
+].astype("Int64")
 
 
 def correspondances(candidats):
@@ -434,6 +536,13 @@ projets_lignes["nb_stations"] = (
     projets_lignes["projet"].map(projets_arrets.groupby("projet").size()).fillna(0)
 )
 projets_lignes["nb_stations"] = projets_lignes["nb_stations"].astype("int64")
+# Seuls les projets qui ont une station dans la zone ou près.
+projets_lignes = projets_lignes[projets_lignes["nb_stations"] > 0].reset_index(
+    drop=True
+)
+projets_lignes = projets_lignes.astype(
+    {"annee_mise_en_service": "Int64", "nouvelle_ligne": "boolean"}
+)
 
 # Contrôles : ils arrêtent le notebook si les tables n'ont pas la forme attendue.
 assert projets_arrets["arret_id"].is_unique

@@ -24,15 +24,23 @@
 # (décision 7) et les cartes. Quatre tables :
 #
 # - `iris` : un IRIS (quartier INSEE d'environ 2 000 habitants) par ligne, avec la
-#   motorisation de ses ménages (recensement 2022) et, pour les IRIS de la zone, leur
-#   contour.
+#   motorisation de ses ménages (recensement 2023, publié le 20 octobre 2026) et, pour les
+#   IRIS de la zone, leur contour.
 # - `equipements` : les équipements de la zone et à moins de `rayon_m` (base permanente des
 #   équipements 2025 : commerces, services, santé, enseignement, sport...), pour les cartes.
 # - `carreaux_variables` et `carreaux_france_variables` : une ligne par carreau, même clé
 #   `idcar_200m` que `carreaux` et `carreaux_france`. On y trouve l'IRIS du carreau, la
-#   motorisation qui s'y applique, et le nombre d'équipements par famille dans le carreau
-#   (`_carreau`) et à moins de `rayon_m` de son centre (`_5min`, le même rayon que pour les
-#   transports).
+#   motorisation qui s'y applique, le nombre d'équipements par famille et le nombre
+#   d'emplois salariés, dans le carreau (`_carreau`) et à moins de `rayon_m` de son centre
+#   (`_5min`, le même rayon que pour les transports).
+#
+# Les emplois viennent du répertoire Sirene, mis à jour chaque mois : les établissements
+# actifs qui déclarent une tranche d'effectif salarié (au 31 décembre 2024), placés par la
+# géolocalisation de l'INSEE et comptés pour le milieu de leur tranche (15 000 pour la
+# tranche « 10 000 et plus »). Le total de la France, 27,3 millions, retombe sur les 27,0
+# millions de salariés que compte l'INSEE. Les établissements placés au hasard dans leur
+# commune (qualité 33) ne comptent pas. Une structure qui déclare tout son personnel à une
+# adresse (mairie, CHU sur plusieurs sites) le concentre en un point.
 #
 # La motorisation n'existe pas au carreau. Chaque carreau prend celle de l'IRIS où tombe son
 # centre (`rattachement` = iris), celle de sa commune si elle n'est pas découpée en IRIS
@@ -50,11 +58,12 @@ import math
 import os
 import tempfile
 import time
-import zipfile
 
 import notebookutils
 import numpy as np
 import pandas as pd
+import pyarrow.compute as pc
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import requests
 from deltalake import DeltaTable, write_deltalake
@@ -88,19 +97,50 @@ parametres = notebookutils.variableLibrary.getLibrary("parametres_mobilite")
 LAKEHOUSE = parametres.lakehouse
 RAYON_M = int(parametres.rayon_m)
 RETELECHARGER = str(parametres.retelecharger_insee).lower() == "true"
-URL_LOGEMENT = (
-    "https://www.insee.fr/fr/statistiques/fichier/8647012/base-ic-logement-2022_csv.zip"
-)
+URL_LOGEMENT = "https://api.insee.fr/melodi/file/DS_RP_LOGEMENT_PRINC_IRIS_2023/PARQUET"
 URL_BPE = "https://www.insee.fr/fr/statistiques/fichier/8217525/BPE25.parquet"
+# Sirene sur data.gouv.fr : adresses stables, qui mènent au fichier du mois.
+URL_SIRENE_STOCK = (
+    "https://www.data.gouv.fr/api/1/datasets/r/a29c1297-1f92-4e2a-8f6b-8c902ce96c5f"
+)
+URL_SIRENE_GEOLOC = (
+    "https://www.data.gouv.fr/api/1/datasets/r/672007af-0146-491f-835c-8314d63fa44e"
+)
+# Effectif salarié retenu pour chaque tranche de Sirene : le milieu de la tranche.
+EFFECTIF_TRANCHE = {
+    "01": 1.5,
+    "02": 4.0,
+    "03": 7.5,
+    "11": 14.5,
+    "12": 34.5,
+    "21": 74.5,
+    "22": 149.5,
+    "31": 224.5,
+    "32": 374.5,
+    "41": 749.5,
+    "42": 1499.5,
+    "51": 3499.5,
+    "52": 7499.5,
+    "53": 15000.0,
+}
 WFS_IGN = "https://data.geopf.fr/wfs/ows"
 COUCHE_IRIS = "STATISTICALUNITS.IRIS:contours_iris"
-# Comptes de ménages du recensement 2022, par IRIS.
+# Recensement 2023, au format long des normes européennes : une ligne par unité (IRIS, ou
+# commune non découpée) et par croisement de modalités. On garde les résidences
+# principales (autant que de ménages), toutes autres modalités confondues (« _T »)...
+FILTRES_LOGEMENT = [("RP_MEASURE", "=", "DWELLINGS"), ("OCS", "=", "DW_MAIN")] + [
+    (dimension, "=", "_T")
+    for dimension in ("TDW", "L_STAY", "NRG_SRC", "NOR", "TSH", "BUILD_END", "UFS")
+]
+# ...puis on lit chaque compte de ménages par son nombre de voitures (CARS) et son
+# emplacement réservé de stationnement (CARPARK). Anciens noms : P22_MEN, P22_RP_VOIT1P,
+# P22_RP_VOIT1, P22_RP_VOIT2P et P22_RP_GARL (table de passage de l'INSEE).
 COMPTES = {
-    "P22_MEN": "menages",
-    "P22_RP_VOIT1P": "menages_avec_voiture",
-    "P22_RP_VOIT1": "menages_1_voiture",
-    "P22_RP_VOIT2P": "menages_2_voitures_plus",
-    "P22_RP_GARL": "menages_avec_stationnement",
+    ("_T", "_T"): "menages",
+    ("C_GE1", "_T"): "menages_avec_voiture",
+    ("C1", "_T"): "menages_1_voiture",
+    ("C_GE2", "_T"): "menages_2_voitures_plus",
+    ("_T", "1"): "menages_avec_stationnement",
 }
 # Familles d'équipements, par sous-domaine de la BPE (nomenclature 2025). L'action sociale,
 # l'automobile, le bâtiment et les transports n'en font pas partie : ils ne font pas venir
@@ -245,11 +285,6 @@ def source(url, chemin, verifier):
     return copie
 
 
-def zip_complet(chemin):
-    if zipfile.ZipFile(chemin).testzip() is not None:
-        raise ValueError(f"archive abîmée : {chemin}")
-
-
 def parquet_complet(chemin):
     pq.ParquetFile(chemin)
 
@@ -373,30 +408,39 @@ def pres_de_la_zone(x, y):
 
 # CELL ********************
 
-# Motorisation par IRIS (recensement 2022, géographie au 1er janvier 2024).
-zip_logement = source(
-    URL_LOGEMENT, "brut/insee/base-ic-logement-2022_csv.zip", zip_complet
-)
-with zipfile.ZipFile(zip_logement) as archive:
-    nom = next(
-        n for n in archive.namelist() if n.lower() == "base-ic-logement-2022.csv"
+# Motorisation par IRIS (recensement 2023, géographie au 1er janvier 2025).
+logement = (
+    pq.read_table(
+        source(
+            URL_LOGEMENT,
+            "brut/insee/DS_RP_LOGEMENT_PRINC_IRIS_2023.parquet",
+            parquet_complet,
+        ),
+        columns=["GEO", "GEO_OBJECT", "TYP_IRIS", "CARS", "CARPARK", "OBS_VALUE"],
+        filters=FILTRES_LOGEMENT,
     )
-    with archive.open(nom) as fichier:
-        iris = pd.read_csv(
-            fichier,
-            sep=";",
-            dtype={"IRIS": str, "COM": str, "TYP_IRIS": str},
-            usecols=["IRIS", "COM", "TYP_IRIS", *COMPTES],
-        )
-iris = iris.rename(
-    columns={
-        "IRIS": "code_iris",
-        "COM": "code_commune",
-        "TYP_IRIS": "type_iris",
-        **COMPTES,
-    }
+    .to_pandas()
+    .astype({c: str for c in ("GEO", "GEO_OBJECT", "TYP_IRIS", "CARS", "CARPARK")})
 )
+logement["compte"] = [
+    COMPTES.get(cle) for cle in zip(logement["CARS"], logement["CARPARK"])
+]
+logement = logement[logement["compte"].notna()]
+# Une ligne par unité et par compte : pivot échoue sur un doublon.
+iris = logement.pivot(
+    index=["GEO", "GEO_OBJECT", "TYP_IRIS"], columns="compte", values="OBS_VALUE"
+).reset_index()
+iris.columns.name = None
+# Code IRIS sur 9 caractères ; une commune non découpée reçoit son code suivi de 0000.
+iris["code_iris"] = np.where(
+    iris["GEO_OBJECT"] == "IRIS", iris["GEO"], iris["GEO"] + "0000"
+)
+iris["code_commune"] = iris["GEO"].str[:5]
 NOMS_COMPTES = list(COMPTES.values())
+iris = iris.rename(columns={"TYP_IRIS": "type_iris"})[
+    ["code_iris", "code_commune", "type_iris", *NOMS_COMPTES]
+]
+assert iris["code_iris"].is_unique and iris[NOMS_COMPTES].notna().all().all()
 comptes_iris = iris.set_index("code_iris")[NOMS_COMPTES]
 comptes_commune = iris.groupby("code_commune")[NOMS_COMPTES].sum()
 communes_decoupees = set(iris.loc[iris["type_iris"] != "Z", "code_commune"])
@@ -659,6 +703,63 @@ print(bpe.groupby("famille").size().to_string())
 
 # CELL ********************
 
+# Emplois salariés : les établissements actifs qui ont une tranche d'effectif, joints à leur
+# géolocalisation. Les deux fichiers ne sont lus que pour les colonnes utiles.
+stock = ds.dataset(
+    source(
+        URL_SIRENE_STOCK,
+        "brut/insee/sirene_stock_etablissements.parquet",
+        parquet_complet,
+    ),
+    format="parquet",
+).to_table(
+    columns=["siret", "trancheEffectifsEtablissement"],
+    filter=(ds.field("etatAdministratifEtablissement") == "A")
+    & ds.field("trancheEffectifsEtablissement").isin(list(EFFECTIF_TRANCHE)),
+)
+geolocalisation = ds.dataset(
+    source(
+        URL_SIRENE_GEOLOC,
+        "brut/insee/sirene_geolocalisation_etablissements.parquet",
+        parquet_complet,
+    ),
+    format="parquet",
+).to_table(
+    columns=["siret", "plg_code_commune", "x_longitude", "y_latitude"],
+    filter=ds.field("siret").isin(pc.unique(stock["siret"]))
+    & (ds.field("qualite_xy") != "33"),
+)
+etablissements = (
+    geolocalisation.join(stock, keys="siret", join_type="inner")
+    .to_pandas()
+    .rename(
+        columns={
+            "plg_code_commune": "code_commune",
+            "x_longitude": "lon",
+            "y_latitude": "lat",
+        }
+    )
+)
+etablissements["emplois"] = etablissements["trancheEffectifsEtablissement"].map(
+    EFFECTIF_TRANCHE
+)
+# Les trois premiers caractères du code commune suffisent à trier les territoires (972 et
+# 974 pour la Martinique et La Réunion, les autres DROM n'ont pas de carreaux INSEE).
+etablissements["departement"] = etablissements["code_commune"].str[:3]
+print(
+    f"Sirene : {len(etablissements)} établissements employeurs placés, "
+    f"{etablissements['emplois'].sum():,.0f} emplois (sur {len(stock)} actifs avec une tranche)"
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "jupyter_python"
+# META }
+
+# CELL ********************
+
 # Projection des équipements dans la grille de chaque territoire des carreaux INSEE.
 PROJECTIONS = {
     3035: lambda dep: ~dep.str.startswith("97"),
@@ -707,12 +808,60 @@ def compter(centres, epsg):
     return resultat
 
 
+def compter_emplois(centres, epsg):
+    """Emplois dans chaque carreau et à moins de RAYON_M de son centre, pour un territoire.
+
+    Les centres sont traités par paquets : à Paris, un rayon de 400 m touche des milliers
+    d'établissements.
+    """
+    points = etablissements[PROJECTIONS[epsg](etablissements["departement"])]
+    resultat = pd.DataFrame({"idcar_200m": centres["idcar_200m"].to_numpy()})
+    if points.empty:
+        resultat["emplois_carreau"] = resultat["emplois_5min"] = 0
+        return resultat
+    x, y = Transformer.from_crs("EPSG:4326", f"EPSG:{epsg}", always_xy=True).transform(
+        points["lon"].to_numpy(), points["lat"].to_numpy()
+    )
+    emplois = points["emplois"].to_numpy()
+    case = [
+        f"CRS{epsg}RES200mN{int(b // 200) * 200}E{int(a // 200) * 200}"
+        for a, b in zip(x, y)
+    ]
+    resultat["emplois_carreau"] = (
+        resultat["idcar_200m"]
+        .map(pd.Series(emplois).groupby(case).sum())
+        .fillna(0)
+        .round()
+        .astype("int64")
+    )
+    arbre = cKDTree(np.column_stack([x, y]))
+    xy_centres = centres[["x", "y"]].to_numpy()
+    total = np.zeros(len(xy_centres))
+    for debut in range(0, len(xy_centres), 100_000):
+        voisins = arbre.query_ball_point(xy_centres[debut : debut + 100_000], r=RAYON_M)
+        total[debut : debut + 100_000] = [emplois[v].sum() for v in voisins]
+    resultat["emplois_5min"] = total.round().astype("int64")
+    return resultat
+
+
 equipements_zone = compter(
     carreaux.rename(columns={"x_3035": "x", "y_3035": "y"}), 3035
+).merge(
+    compter_emplois(carreaux.rename(columns={"x_3035": "x", "y_3035": "y"}), 3035),
+    on="idcar_200m",
+    validate="one_to_one",
 )
 equipements_france = pd.concat(
-    [compter(groupe, epsg) for epsg, groupe in france.groupby("epsg")],
+    [
+        compter(groupe, epsg).merge(
+            compter_emplois(groupe, epsg), on="idcar_200m", validate="one_to_one"
+        )
+        for epsg, groupe in france.groupby("epsg")
+    ],
     ignore_index=True,
+)
+print(
+    f"Emplois à 5 minutes, zone : médiane {equipements_zone['emplois_5min'].median():.0f} par carreau"
 )
 
 # METADATA ********************
