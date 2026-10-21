@@ -46,9 +46,9 @@ Cette liste donne l'origine de chaque donnée utilisée par le projet, comme le 
 
 ## Coûts
 
-Les hypothèses viennent des onglets « Hypothèses » des deux classeurs du MBA (voir Fichiers de travail). Le coût Citiz alimente la table `couts` (`optimisation/data/reel/mba/couts.parquet`). Les coûts vélo et bus relèvent de `optimisation/data/mock/MOCK_couts.parquet` (coûts estimés). Les références entre parenthèses (P1, B1, V1...) sont celles des classeurs.
+Les hypothèses viennent des onglets « Hypothèses » des deux classeurs du MBA, rangés dans `docs/couts/` (voir Fichiers de travail). Leurs coûts annuels d'une station Citiz, d'un arrêt de bus et d'une station vélo alimentent la table `couts` (`optimisation/data/reel/mba/couts.parquet`). Les références entre parenthèses (P1, B1, V1...) sont celles des classeurs.
 
-Coût d'une station Citiz (`Coût citiz (2).xlsx`) :
+Coût d'une station Citiz (`docs/couts/Cout_citiz.xlsx`) :
 
 | Organisme | Jeu de données | URL | Date ou millésime | Licence | Utilisé par |
 | --- | --- | --- | --- | --- | --- |
@@ -67,20 +67,20 @@ Coût d'une station Citiz (`Coût citiz (2).xlsx`) :
 | Beev | Coût d'une borne de recharge en entreprise : borne 22 kW de 3 300 à 4 000 € HT (P14), installation de 2 500 à 5 000 € (P15) | <https://www.beev.co/blog/borne-de-recharge/cout-installation-borne-entreprise/> | 2024 | non précisé | classeur seulement (option station électrique, absente de `couts`) |
 | Niort Agglo | Délibération : bornes des stations Citiz à la charge de la collectivité (P15) | <https://www.niortagglo.fr/deliberations-agglo/CA_131123/C33-11-2023-19.pdf> | 2023 | non précisé | classeur seulement (option station électrique) |
 
-Coût d'un arrêt de bus et d'une station vélo (`Cout_bus_velo.xlsx`) :
+Coût d'un arrêt de bus et d'une station vélo (`docs/couts/Cout_bus_velo.xlsx`) :
 
 | Organisme | Jeu de données | URL | Date ou millésime | Licence | Utilisé par |
 | --- | --- | --- | --- | --- | --- |
-| Commune belge (Fléron selon le classeur, document publié sur beyne-heusay.be) | Tableau de bord, chiffrage de voirie : quai bus 5 500 € HT (B1), arrêt accessible 8 750 € HT (B2), abribus 2 200 € (B3) | <https://beyne-heusay.be/sites/default/files/documents/news/Tableau-de-bord%20.pdf> | 2023 | non précisé | `MOCK_couts.parquet` (bus) |
-| Made in Marseille | Mise en accessibilité du réseau RTM : 83,5 M€ sur 10 ans (B4), environ 2 650 arrêts (B5) | <https://madeinmarseille.net/urbanisme-marseille/transport-2/12045-rtm-transport-acces-mobilite-reduite/> | 2016 | non précisé | `MOCK_couts.parquet` (bus) |
-| Commune de Lesparre-Médoc | Durée des amortissements en nomenclature M57 : installations de voirie sur 20 ans (B6) | <https://www.medias.lesparre-medoc.fr/335-Duree-des-amortissements-en-M57.pdf> | 2023 | non précisé | `MOCK_couts.parquet` (bus) |
-| Annemasse Agglo | Acte BC_2025_0020 : 2 quais accessibles avec abribus pour 13 518 € HT (B7, contrôle) | <https://www.annemasse-agglo.fr/sites/default/files/actes-administratifs/BC_2025_0020.pdf> | 2025 | non précisé | `MOCK_couts.parquet` (bus) |
-| France Bleu | Marché VélôToulouse renouvelé à JCDecaux : 97 M€ sur 12 ans (V1) | <https://www.francebleu.fr/infos/transports/velotoulouse-le-marche-renouvele-a-jc-decaux-une-flotte-de-velos-electriques-bientot-deployee-9168605> | 2023 | non précisé | `MOCK_couts.parquet` (vélo) |
-| JCDecaux | Communiqué sur le contrat VélôToulouse : 12 ans (V2), extension possible à 3 825 vélos et 475 stations (V4) | <https://www.jcdecaux.com/press-releases/jcdecaux-wins-contract-city-toulouses-self-service-bikes-12-years-renewing-its> | 2023 | non précisé | `MOCK_couts.parquet` (vélo) |
-| JCDecaux | Communiqué sur le déploiement avec Tisséo Collectivités et Toulouse Métropole : 3 300 vélos (V3), 400 stations (V5) | <https://www.jcdecaux.fr/communiques-de-presse/en-collaboration-avec-tisseo-collectivites-et-toulouse-metropole-jcdecaux> | 2024 | non précisé | `MOCK_couts.parquet` (vélo) |
-| Banque des Territoires (enquête du GART) | Vélos en libre-service : 2 000 à 3 000 € par vélo et par an (V6) | <https://www.banquedesterritoires.fr/velos-en-libre-service-un-bilan-coutsavantages-juge-globalement-equilibre> | 2010 | non précisé | `MOCK_couts.parquet` (vélo) |
-| Élus Verts de Toulouse (archives EELV) | Réponse de Philippe Goirand au vœu sur les vélos en libre-service : 2 000 € par vélo et par an pour l'ancien contrat (V8) | <https://archives.eelv.fr/elusverts.fr/www.toulouse.elusverts.fr/IMG/pdf/Reponse_Philippe_Goirand_Voeu_VLS.pdf> | vers 2013 | non précisé | `MOCK_couts.parquet` (vélo, repère) |
-| m2a (Mulhouse) | Délibération 2366B : station neuve de 10 vélos entre 40 000 et 50 000 € (V9) | <https://www.m2a.fr/wp-content/uploads/2024/07/2366B.pdf> | 2024 | non précisé | `MOCK_couts.parquet` (vélo, repère) |
+| Commune belge (Fléron selon le classeur, document publié sur beyne-heusay.be) | Tableau de bord, chiffrage de voirie : quai bus 5 500 € HT (B1), arrêt accessible 8 750 € HT (B2), abribus 2 200 € (B3) | <https://beyne-heusay.be/sites/default/files/documents/news/Tableau-de-bord%20.pdf> | 2023 | non précisé | `couts` (bus) |
+| Made in Marseille | Mise en accessibilité du réseau RTM : 83,5 M€ sur 10 ans (B4), environ 2 650 arrêts (B5) | <https://madeinmarseille.net/urbanisme-marseille/transport-2/12045-rtm-transport-acces-mobilite-reduite/> | 2016 | non précisé | `couts` (bus) |
+| Commune de Lesparre-Médoc | Durée des amortissements en nomenclature M57 : installations de voirie sur 20 ans (B6) | <https://www.medias.lesparre-medoc.fr/335-Duree-des-amortissements-en-M57.pdf> | 2023 | non précisé | `couts` (bus) |
+| Annemasse Agglo | Acte BC_2025_0020 : 2 quais accessibles avec abribus pour 13 518 € HT (B7, contrôle) | <https://www.annemasse-agglo.fr/sites/default/files/actes-administratifs/BC_2025_0020.pdf> | 2025 | non précisé | `couts` (bus) |
+| France Bleu | Marché VélôToulouse renouvelé à JCDecaux : 97 M€ sur 12 ans (V1) | <https://www.francebleu.fr/infos/transports/velotoulouse-le-marche-renouvele-a-jc-decaux-une-flotte-de-velos-electriques-bientot-deployee-9168605> | 2023 | non précisé | `couts` (vélo) |
+| JCDecaux | Communiqué sur le contrat VélôToulouse : 12 ans (V2), extension possible à 3 825 vélos et 475 stations (V4) | <https://www.jcdecaux.com/press-releases/jcdecaux-wins-contract-city-toulouses-self-service-bikes-12-years-renewing-its> | 2023 | non précisé | `couts` (vélo) |
+| JCDecaux | Communiqué sur le déploiement avec Tisséo Collectivités et Toulouse Métropole : 3 300 vélos (V3), 400 stations (V5) | <https://www.jcdecaux.fr/communiques-de-presse/en-collaboration-avec-tisseo-collectivites-et-toulouse-metropole-jcdecaux> | 2024 | non précisé | `couts` (vélo) |
+| Banque des Territoires (enquête du GART) | Vélos en libre-service : 2 000 à 3 000 € par vélo et par an (V6) | <https://www.banquedesterritoires.fr/velos-en-libre-service-un-bilan-coutsavantages-juge-globalement-equilibre> | 2010 | non précisé | `couts` (vélo) |
+| Élus Verts de Toulouse (archives EELV) | Réponse de Philippe Goirand au vœu sur les vélos en libre-service : 2 000 € par vélo et par an pour l'ancien contrat (V8) | <https://archives.eelv.fr/elusverts.fr/www.toulouse.elusverts.fr/IMG/pdf/Reponse_Philippe_Goirand_Voeu_VLS.pdf> | vers 2013 | non précisé | `couts` (vélo, repère) |
+| m2a (Mulhouse) | Délibération 2366B : station neuve de 10 vélos entre 40 000 et 50 000 € (V9) | <https://www.m2a.fr/wp-content/uploads/2024/07/2366B.pdf> | 2024 | non précisé | `couts` (vélo, repère) |
 
 Hypothèses de l'équipe, sans source : P6 (boîtier et aménagement amortis sur 5 ans), P9 (coefficient d'usure de 1,5), V7 (10 vélos par station).
 
@@ -125,8 +125,8 @@ Ces chiffres servent à `docs/business_plan.md`. Les pages en ligne ont été lu
 
 ## Fichiers de travail
 
-Ces fichiers sont hors dépôt, dans les notes de l'équipe.
+Les deux classeurs du MBA sont dans le dépôt, dans `docs/couts/` ; la présentation de Citiz reste hors dépôt, dans les notes de l'équipe.
 
-- `Coût citiz (2).xlsx` : classeur du MBA sur le coût d'une station Citiz (onglets Synthèse, Justification, Hypothèses, Calcul). Sa ligne « Coût annuel complet par station (thermique ou hybride) » a été importée dans `couts.parquet` le 20/10/2026.
-- `Cout_bus_velo.xlsx` : classeur du MBA sur le coût d'un arrêt de bus et d'une station vélo (onglets Justification, Hypothèses, Calcul).
+- `docs/couts/Cout_citiz.xlsx` (copie de `Coût citiz (2).xlsx`) : classeur du MBA sur le coût d'une station Citiz (onglets Synthèse, Justification, Hypothèses, Calcul). Sa ligne « Coût annuel complet par station (thermique ou hybride) » est importée dans `couts.parquet`.
+- `docs/couts/Cout_bus_velo.xlsx` : classeur du MBA sur le coût d'un arrêt de bus et d'une station vélo (onglets Justification, Hypothèses, Calcul). Ses lignes « Coût annuel d'un arrêt (investissement amorti) » et « Coût annuel complet d'une station de 10 vélos » sont importées dans `couts.parquet`.
 - `20261019 Presentation Citiz Epitech vF.pdf` : présentation de Citiz à l'équipe, le 19 octobre 2026.

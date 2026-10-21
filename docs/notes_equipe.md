@@ -19,16 +19,17 @@ faut savoir dire.
   - les calques usage, places et arbres.
 - Effet sur tes chiffres :
   - Citiz : inchangé (23 stations, 83 090 habitants) ;
-  - le seuil de 25 habitants de MSc 2 réduit les candidats de 4 686 à 2 929 (138 calculs au lieu de 67 400) ;
+  - le seuil de 50 habitants de la table de MSc 2 réduit les candidats de 4 686 à 2 929 (138 calculs au lieu de 67 400) ;
   - la collectivité passe à 53 stations (40 vélo, 13 bus). `docs/ORAL.md` est à jour.
 - À faire de ton côté : relancer `comparer_exact.py` sur ces données pour confirmer le 99,4 %. 132 tests passent.
 
 ## Anthony (MSc 2, les cartes)
 
-- Ta table `acces_carreau` est branchée. La carte de chaleur (objectif 1) s'affiche dans le site, et ton seuil
-  de 25 habitants est celui que l'optimisation applique.
+- Ta table `acces_carreau` est branchée. La carte de chaleur (objectif 1) s'affiche dans le site, et
+  l'optimisation applique le seuil de ta table : 50 habitants. Ton notebook dit 25 : ne le relance pas avant
+  l'oral, les zones grises et la liste des stations changeraient. On les aligne après.
 - Ta branche `msc2-geoposition` n'est pas fusionnée : `Maps.Notebook` sur `main` en est la version complète.
-- À savoir défendre : le choix des 400 m et du seuil de 25. Une limite à assumer : les lignes sans passage le
+- À savoir défendre : le choix des 400 m et du seuil de 50. Une limite à assumer : les lignes sans passage le
   jour de référence sont comptées comme des options.
 
 ## MSc 3 (le modèle)

@@ -2,7 +2,7 @@
 
 | Limite | Effet | Pour aller plus loin |
 | --- | --- | --- |
-| **Accessibilité de MSc 2 avec ses propres règles** : seuil de 25 habitants, lignes sans passage comptées comme des options | Moins de candidats (2 929) ; un carreau près d'une ligne qui ne passe pas paraît desservi. | Filtrer les lignes sur `passages_jour > 0` dans le notebook Maps. |
+| **Accessibilité de MSc 2 avec ses propres règles** : seuil de 50 habitants dans la table livrée (25 dans le notebook), lignes sans passage comptées comme des options | Moins de candidats (2 929) ; un carreau près d'une ligne qui ne passe pas paraît desservi. | Filtrer les lignes sur `passages_jour > 0` dans le notebook Maps. |
 | **Recette d'une nouvelle station = usage moyen mesuré** (29 %) : 30 heures de relevés ne prédisent pas l'usage station par station | Toutes les stations proposées ont la même recette prévue ; l'onglet Business plan montre l'effet d'un usage plus haut ou plus bas. | Un mois de relevés, puis un modèle d'usage (`modele/RESULTATS.md`). |
 | **Cercle de 400 m à vol d'oiseau** (décision 4) | Ignore les coupures (Garonne, rocade, voies ferrées). | Réseau piéton OSM, prévu par MSc 2 si le temps le permet ; seule la matrice de couverture change. |
 | **Coût Citiz du MBA : coût brut, recettes non déduites** ; chiffres d'autres territoires (Genevois, Belgique) ; usure et amortissement du boîtier supposés par l'équipe | Le coût réel net pour Citiz est plus bas que celui utilisé. | Déduire les recettes par voiture (repère : 10 000 € par an en Occitanie). |

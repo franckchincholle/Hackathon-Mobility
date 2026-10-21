@@ -33,7 +33,9 @@ sur les données ouvertes ; les autres chiffres renvoient à leur source ([SOURC
 - Le modèle a été testé à l'aveugle : appris sur les 14 autres réseaux Citiz, sans voir Toulouse, il
   place 82 % de nos stations toulousaines dans les 20 % de carreaux qu'il juge les meilleurs.
 - L'optimisation atteint 99,4 % de l'optimum mathématique en moyenne, en une fraction de seconde.
-- Chaque station proposée a sa place : un parking public sans arbre à moins de 10 m, avec son adresse.
+- 18 stations sur 23 ont déjà leur place : un parking public à plus de 10 m de tout arbre recensé, avec son
+  adresse. Pour les 5 autres, aucun parking public n'est recensé à moins de 300 m : la place se discute avec
+  la commune.
 
 ## Le compte d'une station de 2 voitures
 

@@ -1,7 +1,7 @@
 # Fiche oral (MSc 4 : optimisation et outil de démo)
 
 > Les chiffres entre crochets viennent des données réelles (Toulouse Métropole, copie du Lakehouse du 20/10 à
-> 23 h 24) : l'accessibilité de MSc 2 (seuil de 25 habitants), le score de MSc 3 et les coûts sourcés du MBA
+> 23 h 24) : l'accessibilité de MSc 2 (seuil de 50 habitants), le score de MSc 3 et les coûts sourcés du MBA
 > pour Citiz, le vélo et le bus. Ils ont été recalculés dans la nuit du 20 au 21. Le « 99,4 % de l'optimum »
 > vient de `comparer_exact.py`, gardé en local : à relancer avant l'oral sur ces données.
 
@@ -39,8 +39,8 @@ Avant de passer :
    hypothèses : la carte et la liste se recalculent sur les seuls critères qu'il garde. Le modèle prédictif
    reste notre référence, et il est lui-même un critère possible. »* Montrez un calque d'analyse (motorisation
    ou niveau de vie).
-   Si on vous parle des arbres : *« Citiz nous l'a demandé. Chaque station proposée a sa place de parking, à
-   plus de 10 m d'un arbre, avec son adresse : calque "Places proposées" et fiche de la station. »*
+   Si on vous parle des arbres : *« Citiz nous l'a demandé. 18 stations sur 23 ont déjà leur place de parking,
+   à plus de 10 m de tout arbre recensé, avec son adresse : calque "Places proposées" et fiche de la station. »*
 5. **Le budget**. Glissez de 500 à 250 k€, puis à 1 M€ : *« Le calcul est instantané. »*
    Onglet **Budget → habitants** : *« Chaque euro rapporte moins que le précédent. »*
 6. **L'équité**. Restez sur Citiz et passez le curseur de 0 à 3 : l'encadré « Effet de ce réglage » montre

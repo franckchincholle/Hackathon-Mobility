@@ -23,7 +23,8 @@ stations de la liste, mesurées dès leur ouverture. Le site se relance chaque a
 Trois choses, et chacune a sa parade :
 
 - un usage mesuré sur 30 heures de semaine : la collecte continue ;
-- des places de stationnement à obtenir de la ville : on en propose une précise, avec son adresse ;
+- des places de stationnement à obtenir de la ville : pour 18 stations sur 23, on en propose une précise, avec son
+  adresse ;
 - des coûts estimés : on les teste en fourchette basse et haute, et la liste reste la même.
 
 ## La jurée impact, inclusion et écologie
@@ -44,7 +45,8 @@ Nous parlons de « zones à potentiel », jamais de « quartiers mal desservis �
 sont jamais affichés seuls, et toutes les populations sont arrondies à la dizaine.
 
 **8. Et les arbres, la ville verte ?**
-On ne coupe rien : chaque place proposée est un parking existant, à plus de 10 m d'un arbre. Et chaque
+On ne coupe rien : chaque place proposée est un parking public existant, à plus de 10 m de tout arbre recensé
+(les arbres sont recensés dans 8 communes, où vivent 76 % des habitants). Et chaque
 voiture partagée libère 0,9 à 3 places : jusqu'à 1 380 m² de voirie rendus à la ville, à végétaliser.
 
 ## Le juré de Citiz
