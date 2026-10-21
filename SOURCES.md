@@ -1,6 +1,6 @@
 # Sources des données
 
-Cette liste donne l'origine de chaque donnée utilisée par le projet, comme le demande le kit du hackathon. Les sources ont été consultées en octobre 2026, et les données collectées sont chargées dans le Lakehouse `Mobilite` de l'espace Fabric « Hackathon Mobi ». La colonne « Utilisé par » donne la table du Lakehouse ou le fichier du dépôt qui s'en sert.
+Cette liste donne l'origine de chaque donnée utilisée par le projet, comme le demande le kit du hackathon. Les sources ont été consultées en octobre 2026, et les données collectées sont chargées dans le Lakehouse `Mobilite` de l'espace Fabric « Hackathon Mobi ». La colonne « Utilisé par » donne la table du Lakehouse ou le fichier du dépôt qui s'en sert. 
 
 ## Transports
 
