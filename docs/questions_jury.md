@@ -1,6 +1,6 @@
 # Questions probables du jury
 
-Quatre questions par juré, chacune avec une réponse de deux ou trois phrases. Les chiffres viennent de
+Quatre questions par juré, puis des réserves, chacune avec une réponse de deux ou trois phrases. Les chiffres viennent de
 [business_plan.md](business_plan.md) et de [SOURCES.md](../SOURCES.md). Règle : si on ne sait pas, on le dit,
 et on dit comment on le saurait.
 
@@ -32,8 +32,9 @@ Trois choses, et chacune a sa parade :
 **5. L'autopartage, c'est surtout pour les cadres. Vous allez où ?**
 C'est vrai aujourd'hui : 65 % des usagers sont cadres (ADEME 2022). Notre liste va ailleurs : 82 % des
 habitants qu'elle gagne vivent dans la moitié la plus modeste de la métropole, contre 48 % pour les stations
-actuelles, et 11 350 ménages sans voiture y gagnent une Citiz à 5 minutes. La Métropole rembourse déjà la
-moitié de leurs trajets.
+actuelles, et 11 350 ménages sans voiture y gagnent une Citiz à 5 minutes. Autour de ces stations, il y a deux
+fois plus de logements sociaux qu'autour des stations actuelles : 29 pour 100 ménages, contre 13. La Métropole
+rembourse déjà la moitié de leurs trajets.
 
 **6. Quel impact carbone, concrètement ?**
 Pour les 46 voitures du plan : 212 à 363 voitures personnelles en moins, 460 000 à 874 000 km évités et 118 à
@@ -71,6 +72,22 @@ station qui dort perd 17 500 € par an, et l'outil évite d'en ouvrir.
 Pour prédire l'usage station par station, non, et nous le disons : la corrélation n'est que de 0,14. Pour
 l'ordre de grandeur, oui : 29 % d'usage, c'est cohérent avec 10 000 € par voiture. La collecte continue :
 dans un mois, le modèle d'usage apprendra sur des données stables.
+
+## En réserve, si le jury creuse
+
+**Vos nouvelles stations sont dans des quartiers plus modestes : les gens y loueront-ils ?**
+Nos relevés ne montrent pas de différence. Parmi vos stations actuelles, celles de la moitié la plus modeste de
+la métropole sont louées 28 % du temps, contre 30 % pour les autres : sur 30 heures, l'écart ne se distingue pas
+du hasard. Et la Métropole paie déjà la moitié des trajets Citiz des particuliers sous 35 052 € de revenu fiscal
+par part. Le pilote de 5 stations le vérifiera.
+
+**Et la future ligne C du métro ?**
+Nous avons regardé. Vos stations actuelles proches d'un métro ou d'un tram ne sont pas plus louées que les
+autres : 27 % du temps, contre 32 %, un écart non significatif sur 30 heures. Le métro ne suffit pas à remplir
+une station : notre outil va d'abord là où vivent les habitants qui n'ont pas de Citiz. Une station de notre
+liste sera à 5 minutes de la ligne C, près de Côte Pavée, et 9 des 18 futures stations que nous avons localisées
+n'ont aujourd'hui aucune Citiz à 5 minutes. Quand la ligne ouvrira, ses horaires entreront dans les données de
+Tisséo que lisent nos notebooks, et l'outil la comptera comme les autres lignes.
 
 ## En réserve, si le jury est technique
 
