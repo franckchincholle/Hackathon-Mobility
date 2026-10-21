@@ -10,7 +10,7 @@ Arborescence d'un dossier de données (config.toml) :
     msc1/   carreaux, zone_communes, arrets, arrets_lignes, stations_partagees,
             tisseo_routes, tisseo_trips, tisseo_shapes          (obligatoire)
     msc2/   accessibilite                                       (facultatif)
-    msc3/   scores_potentiel, scores_v2                         (facultatif)
+    msc3/   scores_potentiel (le modèle prédictif v2)           (facultatif)
     mba/    couts                                               (facultatif)
     citiz/  arbres, criteres_citiz, places_candidates, usage_stations  (facultatif)
 """
@@ -62,12 +62,11 @@ COLONNES = {
     "accessibilite": {"idcar_200m": "str", "nb_options": "int", "sous_seuil": "bool"},
     # MSc 2 : population servie par chaque station existante (carte de l'objectif 2)
     "population_servie": {"station_id": "str", "population_servie": "float"},
-    # MSc 3 : score de potentiel de chaque carreau sans station (décision 7)
+    # modèle prédictif (modele/potentiel_v2, qui reprend celui de MSc 3) : score de potentiel de chaque
+    # carreau (décision 7) ; facultatif : rang_centile (0 à 100, ce que l'optimisation utilise), classe, raisons
     "scores_potentiel": {"idcar_200m": "str", "score_potentiel": "float"},
     # MBA : coût complet d'une station et par an, trois niveaux (classeur « Coût citiz.xlsx »)
     "couts": {"type": "str", "cout_bas": "float", "cout_defaut": "float", "cout_haut": "float", "budget": "str"},
-    # modèle v2 : occupation prévue d'une station Citiz dans chaque carreau, et les raisons du score
-    "scores_v2": {"idcar_200m": "str"},
     # les 8 critères de Citiz par carreau (notes de 0 à 100) et leur moyenne, l'indice Citiz
     "criteres_citiz": {"idcar_200m": "str", "indice_citiz": "float"},
     # la place proposée dans chaque carreau : un parking sans arbre à moins de 10 m
@@ -82,7 +81,7 @@ TABLES = {
     "msc1": ("carreaux", "zone_communes", "arrets", "arrets_lignes", "stations_partagees",
              "tisseo_routes", "tisseo_trips", "tisseo_shapes", "carreaux_variables", "iris"),
     "msc2": ("accessibilite", "population_servie"),
-    "msc3": ("scores_potentiel", "scores_v2"),
+    "msc3": ("scores_potentiel",),
     "mba": ("couts",),
     "citiz": ("arbres", "criteres_citiz", "places_candidates", "usage_stations"),
 }
@@ -269,6 +268,8 @@ def depuis_tables(brut: dict[str, pd.DataFrame], dossier: Path | str = ".") -> D
         s = tables["scores_potentiel"]
         if not s.score_potentiel.between(0, 1).all():
             raise ErreurContrat("scores_potentiel.score_potentiel : valeurs hors de [0, 1]")
+        if "rang_centile" in s and not s.rang_centile.between(0, 100).all():
+            raise ErreurContrat("scores_potentiel.rang_centile : valeurs hors de [0, 100]")
         if s.idcar_200m.duplicated().any():
             raise ErreurContrat("scores_potentiel.idcar_200m : identifiants en double")
     tables["couts"] = completer_couts(brut.get("couts"))

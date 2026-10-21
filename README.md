@@ -29,7 +29,7 @@ compte du tenant Epitech. Relancé, il ne réinstalle rien.
 | --- | --- |
 | `donnees/` | MSc 1 : notebooks Fabric de collecte, bibliothèque de variables, description des Lakehouses |
 | `cartes/` | MSc 2 : notebook des cartes d'accessibilité |
-| `modele/` | MSc 3 : modèle prédictif du potentiel, modèle sémantique Power BI |
+| `modele/` | MSc 3 : le modèle prédictif du potentiel (v2) et ses résultats, le modèle sémantique Power BI |
 | `optimisation/` | MSc 4 : site d'optimisation des emplacements ([son README](optimisation/README.md)) |
 | `docs/` | business plan |
 | `presentation/` | support de la soutenance |

@@ -1,11 +1,13 @@
 # Modèle de potentiel v2 : résultats
 
 Pour le coéquipier du modèle et pour le jury. Chiffres d'une exécution du 20/10/2026 du code de
-`modele/potentiel_v2.Notebook`, sur le Lakehouse `Mobilite`. Le modèle actuel ne change pas.
+`modele/potentiel_v2.Notebook`, sur le Lakehouse `Mobilite`. Depuis le 21/10, le v2 est le seul modèle du
+site : il remplace la v1 de MSc 3, dont il reprend la démarche et les 24 variables, et le site le prend par
+son rang (dernière section).
 
-## Ce qui change par rapport au modèle actuel
+## Ce qui change par rapport à la v1 (MSc 3)
 
-| | Actuel (`scores_potentiel_msc3`) | v2 (`scores_potentiel_v2`) |
+| | v1, MSc 3 (`scores_potentiel_msc3`) | v2 (`scores_potentiel_v2`) |
 | --- | --- | --- |
 | Apprend sur | Toulouse (98 carreaux avec station) | les 14 autres réseaux Citiz (70 039 carreaux, 1 326 avec station) |
 | Toulouse | notée par le modèle qui l'a apprise | jamais vue : test à l'aveugle |
@@ -19,13 +21,13 @@ Pour le coéquipier du modèle et pour le jury. Chiffres d'une exécution du 20/
 
 Pourquoi : un modèle noté sur ses propres données d'entraînement ne dit pas ce qu'il vaut
 ailleurs, et le site multiplie le score par la population. Avec un score moyen de 0,23 alors
-que 1,5 % des carreaux portent une station, l'actuel gonfle tout d'un facteur 16.
+que 1,5 % des carreaux portent une station, la v1 gonfle tout d'un facteur 16.
 
 ## Métriques
 
 Test à l'aveugle, Toulouse Métropole : 7 070 carreaux, 103 avec une station (taux de base 1,46 %).
 
-| | v2, aveugle | actuel, appris sur Toulouse | 24 variables actuelles, méthode v2 |
+| | v2, aveugle | v1, appris sur Toulouse | 24 variables de la v1, méthode v2 |
 | --- | --- | --- | --- |
 | ROC-AUC | 0,895 (IC 95 % : 0,862-0,922) | 0,918 | 0,891 |
 | Précision moyenne (AP) | 0,192 | 0,142 | 0,163 |
@@ -34,25 +36,25 @@ Test à l'aveugle, Toulouse Métropole : 7 070 carreaux, 103 avec une station (t
 | Score de Brier (plus bas = mieux) | 0,0132 | 0,1196 | - |
 
 - Sans la couronne de 400 m dans les négatifs : AUC 0,928, AP 0,47, 78 % et 86 % des stations
-  dans les 10 % et 20 % premiers (actuel : 0,953, 0,43, 86 %, 92 %).
+  dans les 10 % et 20 % premiers (v1 : 0,953, 0,43, 86 %, 92 %).
 - Validation, un réseau de côté sur 14 : AUC 0,930, AP 0,198 (taux de base 1,9 %), 77 % et 90 %
   des stations dans les 10 % et 20 % premiers ; logistique : AUC 0,904. Réseau le plus difficile :
   « developpement » (villes moyennes), AUC 0,76 ; les 13 autres entre 0,91 et 0,98.
 - Calibration sur Toulouse : Brier 0,0132, contre 0,0144 pour un taux constant et 0,0200 sans
   calibration. La somme des scores annonce 139 carreaux avec station pour 103 réels ; celle de
-  l'actuel en annonce 1 632.
+  la v1 en annonce 1 632.
 - Usage : occupation des voitures sur les heures facturées, 1 487 stations, 30 heures de
   relevés (19/10 14 h 43 au 20/10 21 h 10 UTC). Régression ridge, un réseau de côté : Spearman
   0,14 (IC 95 % : 0,09-0,19), erreur moyenne 0,240 contre 0,244 avec la moyenne des autres réseaux.
 - Présence contre usage, 102 stations toulousaines : Spearman 0,16 (IC 95 % : -0,05 à 0,37)
-  pour v2, 0,25 (0,04 à 0,44) pour l'actuel.
+  pour v2, 0,25 (0,04 à 0,44) pour la v1.
 - Poids des critères sur Toulouse : mixité habitat-emplois-commerces (1,70), loin devant
   l'habitat collectif ancien (0,51), le profil des ménages (0,35), le stationnement privé
   (0,29), les revenus (0,19), la densité (0,18), la motorisation (0,14) et la gare (0,08).
 
-La table `scores_potentiel_v2` : `score_potentiel` (probabilité calibrée, que le site multiplie
-par la population), `rang_centile` de 0 à 100, `classe` de A (20 % les mieux notés, 84 des 103
-carreaux avec station) à E, `raison_1` à `raison_3`, `occupation_prevue` (indicative).
+La table `scores_potentiel_v2` : `score_potentiel` (probabilité calibrée), `rang_centile` de 0 à
+100 (ce que le site multiplie par la population), `classe` de A (20 % les mieux notés, 84 des 103
+carreaux avec station) à E, `raison_1` à `raison_3`, `occupation_prevue` (indicative, non lue par le site).
 
 ## Limites assumées
 
@@ -71,10 +73,26 @@ carreaux avec station) à E, `raison_1` à `raison_3`, `occupation_prevue` (indi
 1. « Nous avons caché Toulouse au modèle : appris sur les 14 autres réseaux Citiz, il place 82 %
    des stations toulousaines actuelles dans les 20 % de carreaux qu'il juge les meilleurs. »
 2. « Notre score est une probabilité honnête : il annonce 139 carreaux avec station à Toulouse
-   pour 103 réels, quand l'ancien en annonçait 1 632 ; les gains que le site calcule ne sont
-   donc pas gonflés. »
+   pour 103 réels, quand l'ancien en annonçait 1 632. »
 3. « Chaque carreau dit pourquoi : d'abord la mixité entre logements, emplois et commerces,
    puis l'habitat collectif ancien et les petits ménages, ce qui recoupe les critères de Citiz. »
+
+## Dans le site : le rang du v2
+
+Le site multiplie le score d'un emplacement par les habitants qu'il gagnerait. Pris par sa
+probabilité, le v2 pèse plus que le nombre d'habitants : sur les emplacements retenus, il va de 0,07
+à 0,30. Pris par son rang, ramené entre 0 et 1, il garde l'ordre que le test à l'aveugle a validé.
+Scénario de la démo (Citiz, 500 k€ par an, α = 1, coûts par défaut, copie du 21/10) :
+
+| Score qui choisit les stations | v1 (MSc 3) | v2, probabilité | v2, rang (retenu) |
+| --- | --- | --- | --- |
+| Habitants gagnés | 83 090 | 67 310 | 84 840 |
+| Dans la moitié la plus modeste | 82 % | 82 % | 82 % |
+| Ménages sans voiture | 10 980 | 10 290 | 11 350 |
+| Stations avec une place proposée | 18 sur 23 | 20 sur 23 | 19 sur 23 |
+
+Sur ce scénario, le glouton atteint 99,8 % de l'optimum prouvé par une résolution exacte (HiGHS),
+pour α = 0, 1 et 3.
 
 Reproduire : importer `modele/potentiel_v2.Notebook` dans Fabric et l'exécuter ; les tables ne
 s'écrivent qu'avec `ECRIRE_RESULTATS = True`, et jamais par-dessus une table existante.

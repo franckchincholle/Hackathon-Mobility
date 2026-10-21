@@ -14,7 +14,7 @@ sur les données ouvertes ; les autres chiffres renvoient à leur source ([SOURC
 | 31 600 € | Écart de résultat annuel entre une station qui dort (5 % : -17 500 €) et une station bien placée (50 % : +14 100 €), pour le même investissement de 58 180 €. | Calcul `optim_mobilite/rentabilite.py` |
 | 27 sur 106 | Stations qui ont servi moins de 5 % du temps pendant la mesure (54 voitures). 7 stations ont dépassé 70 % (11 voitures). | Mesuré, à confirmer sur un mois |
 | 400 | Voitures visées sur la métropole en 2030, contre 204 relevées aujourd'hui : il en manque environ 200. | Toulouse Métropole, magazine TIM n° 33 ; La Gazette du Midi, mars 2026 |
-| 83 090 | Habitants qui gagnent une Citiz à 5 minutes à pied avec 23 nouvelles stations (500 k€ par an de coût complet), dont 10 980 ménages sans voiture. | Outil d'optimisation ; INSEE Filosofi 2021 et recensement 2023 |
+| 84 840 | Habitants qui gagnent une Citiz à 5 minutes à pied avec 23 nouvelles stations (500 k€ par an de coût complet), dont 11 350 ménages sans voiture. | Outil d'optimisation ; INSEE Filosofi 2021 et recensement 2023 |
 | 82 % | Part de ces nouveaux habitants qui vivent dans la moitié la plus modeste de la métropole. Pour les habitants qui ont déjà une Citiz à 5 minutes : 48 %. | Niveau de vie Filosofi 2021, médiane des habitants (25 657 €) |
 | 118 à 224 t | CO2 évité chaque année par ces 46 voitures, avec 212 à 363 voitures personnelles en moins et 414 à 1 380 m² de voirie libérés. | ADEME, enquête nationale autopartage 2022 ; Base Empreinte |
 
@@ -32,9 +32,9 @@ sur les données ouvertes ; les autres chiffres renvoient à leur source ([SOURC
   station, contre 50 ailleurs (AUC 0,905 sur 7 070 carreaux).
 - Le modèle a été testé à l'aveugle : appris sur les 14 autres réseaux Citiz, sans voir Toulouse, il
   place 82 % de nos stations toulousaines dans les 20 % de carreaux qu'il juge les meilleurs.
-- L'optimisation atteint 99,4 % de l'optimum mathématique en moyenne, en une fraction de seconde.
-- 18 stations sur 23 ont déjà leur place : un parking public à plus de 10 m de tout arbre recensé, avec son
-  adresse. Pour les 5 autres, aucun parking public n'est recensé à moins de 300 m : la place se discute avec
+- L'optimisation atteint 99,8 % de l'optimum mathématique prouvé sur ce scénario, en une fraction de seconde.
+- 19 stations sur 23 ont déjà leur place : un parking public à plus de 10 m de tout arbre recensé, avec son
+  adresse. Pour les 4 autres, aucun parking public n'est recensé à moins de 300 m : la place se discute avec
   la commune.
 
 ## Le compte d'une station de 2 voitures

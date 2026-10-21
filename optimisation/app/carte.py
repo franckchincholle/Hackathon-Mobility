@@ -52,7 +52,7 @@ def _sans_msc2_servie(d):
     return None if d.population_servie is not None else "population servie par station pas encore disponible"
 
 
-def _sans_msc3(d):
+def _sans_modele(d):
     return "score de potentiel pas encore disponible" if "score de potentiel" in d.provisoires else None
 
 
@@ -100,7 +100,7 @@ CALQUES = [
            _sans_msc2_chaleur, "du froid au chaud, 5 classes"),
     Calque("servie", "Population servie par station", "Analyses", False, _sans_msc2_servie,
            "taille du disque = habitants à 5 min"),
-    Calque("score", "Score de potentiel Citiz", "Analyses", False, _sans_msc3,
+    Calque("score", "Score de potentiel Citiz", "Analyses", False, _sans_modele,
            "du turquoise clair (faible) au rouge (fort)"),
 ]
 

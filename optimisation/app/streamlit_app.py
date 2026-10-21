@@ -199,7 +199,8 @@ with st.sidebar:
         index=bases.index(base_demandee) if base_demandee in bases else 0,
         format_func={"modele": "Modèle prédictif", "citiz8": "Les 8 critères de Citiz", "criteres": "Mes critères"}.get,
         help="Le modèle prédictif estime le potentiel Citiz d'un emplacement d'après les quartiers où Citiz "
-             "est déjà installé. « Les 8 critères de Citiz » prend la moyenne des 8 critères de l'emplacement "
+             "est déjà installé : appris sur les 14 autres réseaux Citiz, il a été testé à l'aveugle sur "
+             "Toulouse. « Les 8 critères de Citiz » prend la moyenne des 8 critères de l'emplacement "
              "idéal que Citiz nous a donnés. « Mes critères » remplace ce score par les seuls critères que vous "
              "cochez, avec vos poids : la carte des zones à potentiel et la liste des stations en dépendent alors.",
     )

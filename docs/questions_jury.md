@@ -23,7 +23,7 @@ stations de la liste, mesurées dès leur ouverture. Le site se relance chaque a
 Trois choses, et chacune a sa parade :
 
 - un usage mesuré sur 30 heures de semaine : la collecte continue ;
-- des places de stationnement à obtenir de la ville : pour 18 stations sur 23, on en propose une précise, avec son
+- des places de stationnement à obtenir de la ville : pour 19 stations sur 23, on en propose une précise, avec son
   adresse ;
 - des coûts estimés : on les teste en fourchette basse et haute, et la liste reste la même.
 
@@ -32,7 +32,7 @@ Trois choses, et chacune a sa parade :
 **5. L'autopartage, c'est surtout pour les cadres. Vous allez où ?**
 C'est vrai aujourd'hui : 65 % des usagers sont cadres (ADEME 2022). Notre liste va ailleurs : 82 % des
 habitants qu'elle gagne vivent dans la moitié la plus modeste de la métropole, contre 48 % pour les stations
-actuelles, et 10 980 ménages sans voiture y gagnent une Citiz à 5 minutes. La Métropole rembourse déjà la
+actuelles, et 11 350 ménages sans voiture y gagnent une Citiz à 5 minutes. La Métropole rembourse déjà la
 moitié de leurs trajets.
 
 **6. Quel impact carbone, concrètement ?**
@@ -80,5 +80,5 @@ toulousaines dans les 20 % de carreaux qu'il juge les meilleurs (AUC 0,895). Dé
 [RESULTATS.md](../modele/RESULTATS.md).
 
 **Pourquoi un algorithme glouton plutôt qu'une optimisation exacte ?**
-Il répond en une fraction de seconde et atteint 99,4 % de l'optimum en moyenne, mesuré contre une
+Il répond en une fraction de seconde et atteint 99,8 % de l'optimum prouvé sur ce scénario, mesuré contre une
 résolution exacte. Franck le détaille dans [ORAL.md](../optimisation/docs/ORAL.md).

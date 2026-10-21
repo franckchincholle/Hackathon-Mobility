@@ -18,10 +18,13 @@ faut savoir dire.
   - la fiche d'une station sous la liste, le choix « Les 8 critères de Citiz » ;
   - les calques usage, places et arbres.
 - Effet sur tes chiffres :
-  - Citiz : inchangé (23 stations, 83 090 habitants) ;
-  - le seuil de 50 habitants de la table de MSc 2 réduit les candidats de 4 686 à 2 929 (138 calculs au lieu de 67 400) ;
+  - Citiz : 23 stations et 84 840 habitants. Le site n'a plus qu'un modèle, le v2, pris par son rang, à la
+    place du score de MSc 3 ;
+  - le seuil de 50 habitants de la table de MSc 2 réduit les candidats de 4 686 à 2 929 (151 calculs au lieu de 67 400) ;
   - la collectivité passe à 53 stations (40 vélo, 13 bus). `docs/ORAL.md` est à jour.
-- À faire de ton côté : relancer `comparer_exact.py` sur ces données pour confirmer le 99,4 %. 132 tests passent.
+- Sur le scénario de la démo, le glouton atteint 99,8 % de l'optimum prouvé (résolution exacte, α = 0, 1 et 3).
+  À faire de ton côté : relancer `comparer_exact.py` sur ces données pour mettre à jour ton 99,4 % en moyenne.
+  134 tests passent.
 
 ## Anthony (MSc 2, les cartes)
 
@@ -34,15 +37,18 @@ faut savoir dire.
 
 ## MSc 3 (le modèle)
 
-- Ton modèle reste celui de la démo : c'est le score par défaut, et ta table n'a pas été touchée.
-- Un modèle v2 a été ajouté à côté (`modele/potentiel_v2`, table `scores_potentiel_v2`).
-  - Il a été testé à l'aveugle sur Toulouse : AUC 0,895, et 82 % des stations dans les 20 % de carreaux les
-    mieux notés.
-  - Son score est calibré et il donne 3 raisons par carreau, affichées dans la fiche station.
-  - `modele/RESULTATS.md` compare les deux modèles.
-- Deux points dans ton notebook :
-  - `ECRIRE_RESULTATS = True` par défaut (ligne 55) réécrit la table que lit le site : à passer à False ;
-  - à l'oral, dire que le modèle apprend « où Citiz est installé », et non « où Citiz fonctionne ».
+- Le site n'a plus qu'un modèle : le v2 (`modele/potentiel_v2`, table `scores_potentiel_v2`), qui reprend
+  ta démarche et tes 24 variables.
+  - Il ajoute 12 variables (emplois, densité du voisinage), apprend sur les 14 autres réseaux Citiz et a été
+    testé à l'aveugle sur Toulouse : AUC 0,895, et 82 % des stations dans les 20 % de carreaux les mieux notés.
+  - Le site le prend par son rang : sa probabilité calibrée varie trop d'un carreau à l'autre pour être
+    multipliée par les habitants. Il donne aussi une classe et 3 raisons par carreau, dans la fiche station.
+  - `modele/RESULTATS.md` compare ton modèle (la v1) et le v2.
+- Ton notebook `modele_predictif` n'est plus dans le dépôt, pour n'y laisser qu'une version : il reste dans
+  Fabric et dans l'historique git, et ta table n'a pas été touchée. Si tu le relances, passe d'abord
+  `ECRIRE_RESULTATS` à False : sinon il réécrit ta table.
+- À l'oral, c'est toi qui présentes le modèle : dire qu'il apprend « où Citiz est installé », et non « où
+  Citiz fonctionne ».
 
 ## Le MBA et la PO
 

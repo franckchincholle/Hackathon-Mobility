@@ -62,14 +62,16 @@ sans changer le code.
 Ce qui reste à MSc 4 dans tous les cas : savoir si un carreau a **déjà une station du même type** à 400 m.
 Cela sert à définir les candidats et la population nouvellement desservie.
 
-## 3. MSc 3 : livré
+## 3. MSc 3 : le modèle prédictif, livré
 
-La table **`scores_potentiel_msc3`** du Lakehouse a les colonnes `idcar_200m`, `score_potentiel` (0 à 1), puis
-`candidat_citiz`, `citiz_present` et d'autres. Les 7 070 carreaux y sont, sans valeur vide.
+Le site lit un seul modèle : la table **`scores_potentiel_v2`** du Lakehouse (notebook `modele/potentiel_v2`, qui
+reprend le modèle de MSc 3). Colonnes lues : `idcar_200m`, `score_potentiel` (probabilité calibrée, 0 à 1),
+`rang_centile` (0 à 100), `classe` (A à E) et `raison_1` à `raison_3`. Les 7 070 carreaux y sont, sans valeur vide.
 
-Elle est lue en direct. Comme elle a été écrite par Spark avec des « deletion vectors », c'est DuckDB qui la
-lit. Le score est appliqué à l'**emplacement** (décision 7) : valeur = population nouvellement desservie ×
-score de l'emplacement. Une table `scores_potentiel` aux mêmes colonnes serait lue aussi.
+Le score est appliqué à l'**emplacement** (décision 7) : valeur = population nouvellement desservie × score de
+l'emplacement. Ce score est le **rang** du modèle, ramené entre 0 et 1 : sa probabilité calibrée varie trop d'un
+carreau à l'autre pour être multipliée telle quelle par les habitants (`modele/RESULTATS.md`). Une table sans
+`rang_centile` serait prise par son `score_potentiel`.
 
 ## 4. MBA : Citiz livré, vélo et bus en attente
 

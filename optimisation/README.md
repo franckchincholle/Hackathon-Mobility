@@ -45,8 +45,7 @@ Tout est lu dans le Lakehouse `Mobilite`, en lecture seule (`optim_mobilite/fabr
 | Carreaux, communes, arrêts, lignes, stations | `carreaux`, `zone_communes`, `arrets`, `arrets_lignes`, `stations_partagees` | livré |
 | Tracés des lignes de bus Tisséo | `Files/brut/gtfs/<jour le plus récent>/tisseo.zip` | livré |
 | IRIS de chaque carreau | `carreaux_variables`, `iris` | livré |
-| Score de potentiel | `scores_potentiel_msc3` | livré |
-| Raisons du score (modèle v2) | `scores_potentiel_v2` | livré |
+| Score de potentiel, classe et raisons (modèle prédictif v2) | `scores_potentiel_v2` | livré |
 | Accessibilité, seuil, carte de chaleur | `acces_carreau` (MSc 2 ; `accessibilite` si elle existe) | livré |
 | Population servie par station | `population_servie` | pas livrée : calque désactivé |
 | Coûts | table `couts`, sinon `data/reel/mba/couts.parquet` (classeurs du MBA) | livré |
@@ -55,7 +54,7 @@ Tout est lu dans le Lakehouse `Mobilite`, en lecture seule (`optim_mobilite/fabr
 
 Le détail des colonnes est dans [`docs/CONTRAT.md`](docs/CONTRAT.md).
 
-**Une table écrite par Spark avec des « deletion vectors »** (c'est le cas du score) n'est pas lisible par
+**Une table écrite par Spark avec des « deletion vectors »** (c'était le cas de l'ancien score de MSc 3) n'est pas lisible par
 `deltalake`. Elle est alors lue par DuckDB : c'est automatique.
 
 ## Quand une nouvelle donnée arrive
@@ -78,7 +77,7 @@ Dans la barre latérale, le menu **Calques de la carte** permet de superposer :
 | Résultat de l'optimisation (MSc 4) | stations proposées, habitants nouvellement desservis, **zones à potentiel**, places proposées, arbres autour des stations proposées |
 | Offre existante (MSc 1) | stations Citiz (et leur usage mesuré), VélôToulouse, arrêts de bus, arrêts de métro, tram et train, lignes de bus Tisséo |
 | Territoire (MSc 1) | population par carreau, limites des communes |
-| Cartes de l'équipe | carte de chaleur et population servie (MSc 2), score de potentiel (MSc 3) |
+| Cartes de l'équipe | carte de chaleur et population servie (MSc 2), score de potentiel (modèle prédictif) |
 
 - Un calque dont la source n'est pas livrée est désactivé, et son infobulle dit qui doit le fournir.
 - Le menu **Recadrer sur une commune** zoome sur une commune.
@@ -91,7 +90,8 @@ Dans la barre latérale, le menu **Calques de la carte** permet de superposer :
 
 Dans la barre latérale, la section **« Zones à potentiel : sur quoi se baser ? »** propose trois choix :
 
-- **Modèle prédictif** (par défaut) : le score de potentiel Citiz, appliqué à l'emplacement (décision 7).
+- **Modèle prédictif** (par défaut) : le score de potentiel Citiz du modèle v2, appris sur les 14 autres
+  réseaux Citiz et testé à l'aveugle sur Toulouse, pris par son rang et appliqué à l'emplacement (décision 7).
 - **Les 8 critères de Citiz** : l'indice Citiz, moyenne des 8 critères de « l'emplacement idéal » que Citiz nous
   a donnés (`optim_mobilite/criteres_citiz.py`, notebook `08_criteres_citiz`).
 - **Mes critères** : un panneau par groupe, avec pour chaque critère une case, un poids (×1 à ×3) et, quand
