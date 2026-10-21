@@ -4,7 +4,7 @@
 
 Tout est lu en local au démarrage puis gardé en cache : aucun téléchargement de données
 pendant la démo. Les réglages se passent aussi par l'URL (?budget=citiz&montant=500000&alpha=1
-&fourchette=defaut), ce qu'utilise scripts/captures.py.
+&fourchette=defaut).
 """
 
 import sys

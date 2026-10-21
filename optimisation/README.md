@@ -25,8 +25,7 @@ Tests (sans réseau) : `.venv/bin/python -m pytest tests -q` (132 tests), ou `./
 
 **Ce que le dépôt contient** : le site (`app/`, `optim_mobilite/`, `config.toml`, `.streamlit/`), sa documentation
 (`docs/`), ses tests (`tests/`) et la copie des tables (`scripts/telecharger_lakehouse.py`). Les coûts des trois
-équipements, importés des classeurs du MBA (`../docs/couts/`), sont dans `data/reel/mba/couts.parquet`. Les
-captures du plan B sont dans `../presentation/captures/`.
+équipements, importés des classeurs du MBA (`../docs/couts/`), sont dans `data/reel/mba/couts.parquet`.
 
 **Ce qui n'y est pas** :
 

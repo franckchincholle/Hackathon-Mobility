@@ -194,7 +194,7 @@ une grille précalculée (588 scénarios) pour Power BI.
 
 - Streamlit fait tourner le vrai algorithme à chaque mouvement de curseur.
 - Power BI ne peut que filtrer des scénarios déjà calculés.
-- Plan B : `scripts/captures.py`, et un mode sans fond de carte.
+- Plan B : un mode sans fond de carte.
 
 ## 13. Vélo et bus : sans modèle dédié (décision 11)
 

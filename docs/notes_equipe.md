@@ -47,4 +47,4 @@ faut savoir dire.
 
 - Tes classeurs de coûts sont dans le dépôt (`docs/couts/`) et branchés dans le site.
 - `docs/business_plan.md` donne les chiffres et les phrases pour les slides. `docs/questions_jury.md`
-  prépare les questions, et `presentation/` contient une esquisse de slides en HTML et les captures de la démo.
+  prépare les questions, et `presentation/` contient les 7 slides du pitch en HTML.

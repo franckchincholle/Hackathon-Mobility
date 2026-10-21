@@ -20,7 +20,6 @@
 Avant de passer :
 
 - lancez `./start.sh --hors-ligne` à la racine du dépôt (la copie des tables doit avoir été faite par `./start.sh`) ;
-- gardez les captures de `presentation/captures/` ouvertes en secours ;
 - si le réseau est mauvais, coupez « Fond de carte ».
 
 1. **Le problème** (budget Citiz, 500 k€ par an, α = 1, coûts par défaut du MBA).
