@@ -121,6 +121,21 @@ html:not(.js) .slide{position:relative;opacity:1;visibility:visible}
 .point .t2{font-size:27px;line-height:1.3;color:var(--gris);margin-top:14px}
 .final{left:96px;top:716px;font-size:56px;font-weight:700;color:#fff;transform:rotate(-2deg);transform-origin:left center}
 .final span{display:inline-block;background:var(--turq);padding:10px 34px 16px}
+/* page d'attente, avant la slide 1 */
+.att-marque{left:0;top:0;width:1200px;height:1080px;background:linear-gradient(135deg,var(--turq) 0%,var(--turq-fonce) 100%)}
+.att-points{left:760px;top:64px;width:400px;height:300px;background-image:radial-gradient(circle,rgba(255,255,255,.3) 6px,transparent 7px);background-size:36px 36px;-webkit-mask-image:linear-gradient(225deg,#000 20%,transparent 85%);mask-image:linear-gradient(225deg,#000 20%,transparent 85%)}
+.att-logo{left:110px;top:290px;width:440px;height:178px}
+.att-logo svg{display:block;width:440px;height:178px}
+.att-titre{left:110px;top:502px;margin:0;font-size:124px;font-weight:700;line-height:1;letter-spacing:-3px;color:#fff}
+.att-sous{left:110px;top:690px;font-size:50px;font-weight:700;color:var(--turq-fonce);transform:rotate(-2deg);transform-origin:left center}
+.att-sous span{display:inline-block;background:#fff;padding:8px 30px 14px}
+.att-partenaires{left:110px;bottom:70px;font-size:26px;color:#fff}
+.att-equipe{left:1310px;top:0;width:540px;height:1080px;display:flex;flex-direction:column;justify-content:center}
+.att-equipe .cap{font-size:30px;font-weight:700;color:var(--turq-fonce)}
+.att-noms{list-style:none;margin:30px 0 0;padding:0}
+.att-noms li{display:flex;align-items:center;font-size:40px;font-weight:700;line-height:1.2;color:var(--texte)}
+.att-noms li+li{margin-top:30px}
+.att-noms li::before{content:"";flex:none;width:16px;height:16px;border-radius:50%;background:var(--turq);margin-right:22px}
 /* habillage écran */
 #panneau-notes{display:none;position:fixed;left:0;right:0;bottom:0;height:32vh;overflow:auto;background:#F6F6F6;color:#202020;padding:14px 36px 24px;font-size:20px;line-height:1.5}
 body.avec-notes #panneau-notes{display:block}
@@ -163,6 +178,20 @@ body.presentateur{padding:0 0 24px}
 </head>
 <body>
 <div id="scene"><div id="pont">
+
+<section class="slide attente" aria-label="Page d'attente">
+  <div class="att-marque bloc"></div>
+  <div class="att-points bloc"></div>
+  <div class="att-logo bloc"><svg viewBox="0 0 116 47" width="116" height="47" role="img" aria-label="Citiz"><path d="M116 45.5696V39.1728H99.836L115.168 19.9197V14.239H90.0322V20.6357H104.473L89.1407 39.708V45.5671H116.003L116 45.5696ZM80.8202 10.4727C83.1375 10.4727 85.2776 8.37984 85.2776 5.57088C85.2776 3.00061 83.14 0.847412 80.8202 0.847412C78.323 0.847412 76.1855 3.00061 76.1855 5.57088C76.1855 8.37984 78.323 10.4727 80.8202 10.4727ZM85.0404 14.239H76.6025V45.5696H85.0404V14.239ZM72.4423 39.1728C71.0164 39.5321 69.3533 39.7105 67.3905 39.7105C61.5672 39.7105 60.9729 38.0975 60.9729 33.9092V20.0981H71.3735V14.239H60.9729V6.40503H58.181L47.6631 16.8092V20.0981H52.535V36.482C52.535 43.537 57.764 46.2882 65.193 46.2882C68.282 46.2882 71.0164 45.9289 72.4423 45.2103V39.1728ZM39.6372 10.4727C41.9546 10.4727 44.0946 8.37984 44.0946 5.57088C44.0946 3.00061 41.9546 0.847412 39.6372 0.847412C37.1401 0.847412 35.0025 3.00061 35.0025 5.57088C35.0025 8.37984 37.1401 10.4727 39.6372 10.4727ZM43.8574 14.239H35.4195V45.5696H43.8574V14.239ZM23.0587 34.8061C22.6441 38.4543 18.781 40.0095 16.7009 40.0095C10.6403 40.0095 8.38292 35.6453 8.38292 29.6656C8.38292 24.5828 10.7003 19.7991 15.9892 19.7991C19.6151 19.7991 21.8725 21.8317 22.2895 24.9421H30.4302C30.4302 19.8594 26.3899 13.5204 16.169 13.5204C4.27761 13.5204 0 21.4121 0 29.844C0 39.8286 5.52619 46.2882 16.6984 46.2882C24.959 46.2882 30.8423 41.0271 31.1994 34.8087H23.0587V34.8061Z" fill="#fff"/></svg></div>
+  <h1 class="att-titre bloc">Toulouse 2030</h1>
+  <p class="att-sous bloc"><span>Hackathon Mobility</span></p>
+  <p class="att-partenaires bloc">Epitech x Citiz x Microsoft</p>
+  <div class="att-equipe bloc">
+    <p class="cap">L'équipe</p>
+    <ul class="att-noms"><li>Anthony Perret</li><li>Emmy Viola</li><li>Franck Chincholle</li><li>Kilian Demangel</li><li>Pierre Montaret</li></ul>
+  </div>
+  <aside class="notes" data-titre="Page d'attente"><p>À l'écran pendant que le jury s'installe. Flèche droite, espace ou clic : la slide 1 s'affiche et le chrono démarre. Flèche gauche depuis la slide 1 : retour à cette page.</p></aside>
+</section>
 
 <section class="slide s1" data-duree="25" aria-label="Slide 1">
   <div class="s1-titre bloc">
@@ -274,7 +303,9 @@ body.presentateur{padding:0 0 24px}
 <script>
 document.documentElement.classList.add('js');
 (function(){
-  var slides = Array.prototype.slice.call(document.querySelectorAll('#pont .slide'));
+  // La page d'attente n'est pas numérotée : les touches 1 à 7, les ancres et les repères ne bougent pas.
+  var slides = Array.prototype.slice.call(document.querySelectorAll('#pont .slide:not(.attente)'));
+  var attente = document.querySelector('#pont .attente'), enAttente = false;
   var duree = slides.map(function(s){ var n = s.querySelector('.notes'); return n ? +(n.getAttribute('data-duree')||0) : 0; });
   var cur = -1, pres = null, t0 = null, pauseA = null, cumulPause = 0, minuteur = null;
   var pont = document.getElementById('pont'), scene = document.getElementById('scene'), fil = document.getElementById('fil');
@@ -288,28 +319,43 @@ document.documentElement.classList.add('js');
     if (m){ var i = +m[1]-1; if (i >= 0 && i < slides.length) return i; }
     return 0;
   }
-  function notesDe(i){ var n = slides[i].querySelector('.notes'); return n ? n.innerHTML : ''; }
-  function titreDe(i){ var n = slides[i].querySelector('.notes'); return n ? (n.getAttribute('data-titre')||'') : ''; }
+  // i = -1 désigne la page d'attente
+  function elDe(i){ return i < 0 ? attente : slides[i]; }
+  function ici(){ return enAttente ? -1 : cur; }
+  function notesDe(i){ var n = elDe(i).querySelector('.notes'); return n ? n.innerHTML : ''; }
+  function titreDe(i){ var n = elDe(i).querySelector('.notes'); return n ? (n.getAttribute('data-titre')||'') : ''; }
   function mmss(s){ s = Math.max(0, Math.round(s)); return (s/60|0) + ':' + ('0' + (s%60)).slice(-2); }
-  function position(i){ return 'Slide ' + (i+1) + ' / ' + slides.length; }
+  function position(i){ return i < 0 ? 'Avant le pitch' : 'Slide ' + (i+1) + ' / ' + slides.length; }
   function repere(i){
     if (!duree[i]) return '';
     var fin = 0; for (var j = 0; j <= i; j++) fin += duree[j];
     return 'prévu ' + duree[i] + ' s · repère de fin ' + mmss(fin);
   }
   function majNotes(){
-    document.getElementById('pn-titre').textContent = position(cur) + ' · ' + titreDe(cur) + (repere(cur) ? ' · ' + repere(cur) : '');
-    document.getElementById('pn-texte').innerHTML = notesDe(cur);
+    var i = ici();
+    document.getElementById('pn-titre').textContent = position(i) + ' · ' + titreDe(i) + (repere(i) ? ' · ' + repere(i) : '');
+    document.getElementById('pn-texte').innerHTML = notesDe(i);
   }
   function aller(i){
     i = Math.max(0, Math.min(slides.length-1, i));
-    if (i === cur) return;
+    if (i === cur && !enAttente) return;
+    // quitter la page d'attente lance le pitch, donc le chrono
+    if (enAttente) { enAttente = false; attente.classList.remove('active'); if (t0 === null) t0 = Date.now(); }
     if (cur >= 0) slides[cur].classList.remove('active');
     cur = i; slides[cur].classList.add('active');
     fil.style.width = ((cur+1) / slides.length * 100) + '%';
     try { history.replaceState(null, '', '#' + (cur+1)); } catch(e) { location.hash = '#' + (cur+1); }
     majNotes(); synchro();
   }
+  function montrerAttente(){
+    enAttente = true;
+    if (cur >= 0) slides[cur].classList.remove('active');
+    attente.classList.add('active');
+    fil.style.width = '0';
+    majNotes(); synchro();
+  }
+  function suivante(){ aller(enAttente ? cur : cur + 1); }
+  function precedente(){ if (enAttente) return; if (cur === 0) montrerAttente(); else aller(cur - 1); }
   function pleinEcran(){
     if (!document.fullscreenElement) { var r = document.documentElement.requestFullscreen; if (r) document.documentElement.requestFullscreen().catch(function(){}); }
     else document.exitFullscreen().catch(function(){});
@@ -329,7 +375,7 @@ document.documentElement.classList.add('js');
     var d = cadre.ownerDocument; cadre.innerHTML = '';
     if (i === null || i >= slides.length) { var f = d.createElement('div'); f.className = 'p-fin'; f.textContent = 'Fin'; cadre.appendChild(f); return; }
     var ech = d.createElement('div'); ech.className = 'p-echelle';
-    var c = d.importNode(slides[i], true); c.classList.add('active');
+    var c = d.importNode(elDe(i), true); c.classList.add('active');
     ech.appendChild(c); cadre.appendChild(ech);
     ech.style.transform = 'scale(' + (cadre.clientWidth/1920) + ')';
   }
@@ -343,11 +389,12 @@ document.documentElement.classList.add('js');
     if (!pres || pres.closed) return;
     var d = pres.document;
     if (!d.getElementById('p-cur')) return;
-    remplir(d.getElementById('p-cur'), cur);
-    remplir(d.getElementById('p-next'), cur + 1 < slides.length ? cur + 1 : null);
-    d.getElementById('p-notes').innerHTML = notesDe(cur);
-    d.getElementById('p-pos').textContent = position(cur) + ' · ' + titreDe(cur);
-    d.getElementById('p-repere').textContent = repere(cur);
+    var i = ici();
+    remplir(d.getElementById('p-cur'), i);
+    remplir(d.getElementById('p-next'), i + 1 < slides.length ? i + 1 : null);
+    d.getElementById('p-notes').innerHTML = notesDe(i);
+    d.getElementById('p-pos').textContent = position(i) + ' · ' + titreDe(i);
+    d.getElementById('p-repere').textContent = repere(i);
     majChrono();
   }
   function ouvrirPresentateur(){
@@ -364,14 +411,14 @@ document.documentElement.classList.add('js');
       '<div class="p-grille"><div><p class="p-etiquette">En cours</p><div class="p-cadre" id="p-cur"></div><div id="p-notes"></div></div>' +
       '<div><p class="p-etiquette">Suivante</p><div class="p-cadre" id="p-next"></div></div></div></body></html>');
     d.close();
-    if (t0 === null) t0 = Date.now();
+    if (t0 === null && !enAttente) t0 = Date.now();
     d.addEventListener('keydown', clavier);
     d.getElementById('p-pause').addEventListener('click', function(){
       if (pauseA === null) pauseA = Date.now(); else { cumulPause += Date.now() - pauseA; pauseA = null; }
       majChrono();
     });
     d.getElementById('p-zero').addEventListener('click', function(){ t0 = Date.now(); cumulPause = 0; pauseA = null; majChrono(); });
-    d.getElementById('p-next').addEventListener('click', function(){ aller(cur + 1); });
+    d.getElementById('p-next').addEventListener('click', suivante);
     pres.addEventListener('resize', echelles);
     if (!minuteur) minuteur = setInterval(majChrono, 500);
     synchro();
@@ -381,8 +428,8 @@ document.documentElement.classList.add('js');
   function clavier(e){
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var k = e.key;
-    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ' || k === 'Spacebar' || k === 'Enter') { e.preventDefault(); aller(cur + 1); }
-    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace') { e.preventDefault(); aller(cur - 1); }
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ' || k === 'Spacebar' || k === 'Enter') { e.preventDefault(); suivante(); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace') { e.preventDefault(); precedente(); }
     else if (k === 'Home') { e.preventDefault(); aller(0); }
     else if (k === 'End') { e.preventDefault(); aller(slides.length - 1); }
     else if (k === 'f' || k === 'F' || k === 'F5') { e.preventDefault(); if (e.currentTarget === document) pleinEcran(); }
@@ -395,12 +442,14 @@ document.documentElement.classList.add('js');
   }
 
   document.addEventListener('keydown', clavier);
-  scene.addEventListener('click', function(e){ if (e.button === 0) aller(cur + 1); });
+  scene.addEventListener('click', function(e){ if (e.button === 0) suivante(); });
   window.addEventListener('resize', ajuster);
   window.addEventListener('hashchange', function(){ aller(indexDepuisAncre()); });
   window.addEventListener('beforeunload', function(){ if (pres && !pres.closed) pres.close(); });
   ajuster();
   aller(indexDepuisAncre());
+  // ouverte sans ancre ou sur la slide 1, la présentation commence par la page d'attente
+  if (cur === 0) montrerAttente();
   window.citiz = { aller: aller, courante: function(){ return cur; }, total: slides.length };
 })();
 </script>
