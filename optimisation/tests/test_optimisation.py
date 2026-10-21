@@ -270,6 +270,28 @@ def test_livraisons_de_l_equipe_remplacent_le_provisoire():
     assert c.loc["C", "score_citiz"] == 0.9
 
 
+def test_le_modele_compte_par_son_rang_avec_sa_classe_et_ses_raisons():
+    t = tables_msc1()
+    t["scores_potentiel"] = pd.DataFrame({
+        "idcar_200m": ["A", "B", "C"], "score_potentiel": [0.01, 0.30, 0.05], "rang_centile": [20.0, 100.0, 60.0],
+        "classe": ["D", "A", "C"], "raison_1": ["Quartier peu dense", "Quartier dense", "Ménages peu motorisés"],
+    })
+    d = depuis_tables(t)
+    c = d.carreaux.set_index("idcar_200m")
+    # le rang, pas la probabilité : B vaut 1 et A 0,2, et non 0,30 et 0,01
+    assert c.loc["B", "score_citiz"] == pytest.approx(1.0) and c.loc["A", "score_citiz"] == pytest.approx(0.2)
+    assert c.loc["B", "classe"] == "A" and c.loc["A", "raison_1"] == "Quartier peu dense"
+    assert "rang" in d.sources["score de potentiel"]
+
+
+def test_contrat_refuse_un_rang_hors_de_0_a_100():
+    t = tables_msc1()
+    t["scores_potentiel"] = pd.DataFrame({"idcar_200m": ["A", "B", "C"], "score_potentiel": [0.1, 0.2, 0.3],
+                                          "rang_centile": [10.0, 50.0, 150.0]})
+    with pytest.raises(ErreurContrat, match="rang_centile"):
+        depuis_tables(t)
+
+
 def test_contrat_signale_une_colonne_manquante():
     t = tables_msc1()
     t["carreaux"] = t["carreaux"].drop(columns="population")
@@ -375,7 +397,10 @@ def test_calques_de_l_equipe_s_activent_a_la_livraison():
         population_servie=pd.DataFrame({"station_id": ["v1"], "population_servie": [480.0]}),
         scores_potentiel=pd.DataFrame({"idcar_200m": ["A", "B", "C"], "score_potentiel": [0.2, 0.5, 0.9]}),
     )
-    assert not {c.cle for c in carte.CALQUES if c.indisponible(d) and not c.cle.startswith("crit_")}
+    # les calques de Citiz (arbres, places, usage mesuré) attendent leurs propres tables
+    citiz = {"arbres", "places", "usage"}
+    assert {c.cle for c in carte.CALQUES if c.indisponible(d)} >= citiz
+    assert not {c.cle for c in carte.CALQUES if c.indisponible(d) and not c.cle.startswith("crit_")} - citiz
 
 
 # ---------- lecture en direct et copie de secours ----------

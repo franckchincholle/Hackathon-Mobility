@@ -7,3 +7,19 @@
 notes/
 
 CLAUDE.md
+
+# Python : environnements, caches de compilation et de tests
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Copie locale du Lakehouse (start.sh, scripts/telecharger_lakehouse.py) ;
+# seul le coût Citiz importé du classeur du MBA est versionné
+optimisation/data/reel/*
+!optimisation/data/reel/mba/
+optimisation/data/reel/mba/*
+!optimisation/data/reel/mba/couts.parquet
+
+# Marques ajoutées par Windows aux fichiers téléchargés
+*:Zone.Identifier

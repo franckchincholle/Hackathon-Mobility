@@ -8,8 +8,8 @@ quelle par leur livraison.
   décisions 3 et 4 appliquées telles quelles (une option = une ligne distincte qui s'arrête
   à 400 m ou moins du centre du carreau, ou une station vélo ou Citiz ; les scooters en
   free-floating ne comptent pas) et un seuil de population provisoire.
-- Score de potentiel (MSc 3, pas encore livré) : 1 partout ; la valeur d'un emplacement est
-  alors sa seule population nouvellement desservie.
+- Score de potentiel (modèle prédictif, pas encore livré) : 1 partout ; la valeur d'un
+  emplacement est alors sa seule population nouvellement desservie.
 - Coûts (MBA, pas encore livrés) : MOCK_couts.
 
 Ce qui est propre à MSc 4 et reste ici : savoir, pour chaque carreau, s'il a déjà une
@@ -170,8 +170,12 @@ def assembler(t: dict[str, pd.DataFrame], dossier: Path) -> Donnees:
         if "iris" in t and "type_iris" in t["iris"]:
             types = dict(zip(t["iris"].code_iris, t["iris"].type_iris.fillna("").astype(str)))
             carreaux["type_iris"] = [types.get(codes.get(i, ""), "") for i in carreaux.idcar_200m]
+    arbres = None
     if "arbres" in t:
         carreaux["nb_arbres"] = compter_arbres(t["arbres"], carreaux, avertissements)
+        if {"lat", "lon"} <= set(t["arbres"].columns):
+            arbres = t["arbres"][["lat", "lon"]].apply(pd.to_numeric, errors="coerce").dropna()
+            arbres["x_3035"], arbres["y_3035"] = vers_3035(arbres.lon.to_numpy(), arbres.lat.to_numpy())
     sources["population, arrêts, stations"] = "INSEE Filosofi 2021 (carreaux 200 m), GTFS Tisséo, liO et TER, GBFS VélôToulouse et Citiz"
 
     # Une station de chaque type à 400 m : de quoi définir candidats et population nouvellement desservie.
@@ -201,22 +205,48 @@ def assembler(t: dict[str, pd.DataFrame], dossier: Path) -> Donnees:
     if "options_pour_1000" not in carreaux:
         carreaux["options_pour_1000"] = np.nan  # carte de chaleur de MSc 2, pas encore livrée
 
-    # Score de l'emplacement (décision 7) ; 1 tant que MSc 3 n'a pas livré.
+    # Score de l'emplacement (décision 7) : le modèle prédictif (modele/potentiel_v2), pris par son rang
+    # de 0 à 1 quand la table le donne. Sa probabilité calibrée varie trop d'un carreau à l'autre pour
+    # être multipliée telle quelle par les habitants : l'outil en servirait 16 000 de moins pour le même
+    # budget (modele/RESULTATS.md). L'occupation prévue par le modèle n'est pas lue : sur 30 h de
+    # relevés, elle ne prédit presque rien ; une nouvelle station compte avec l'usage moyen mesuré.
+    # 1 partout tant que le modèle n'a pas livré.
     if "scores_potentiel" in t:
-        carreaux = carreaux.merge(t["scores_potentiel"][["idcar_200m", "score_potentiel"]], on="idcar_200m", how="left")
+        s = t["scores_potentiel"]
+        colonne = "rang_centile" if "rang_centile" in s else "score_potentiel"
+        echelle = 100.0 if colonne == "rang_centile" else 1.0
+        garder = [c for c in ("classe", "raison_1", "raison_2", "raison_3") if c in s]
+        livre = s.drop_duplicates("idcar_200m")[["idcar_200m", colonne, *garder]]
+        carreaux = carreaux.merge(livre.rename(columns={colonne: "score_potentiel"}), on="idcar_200m", how="left")
+        carreaux["score_potentiel"] = carreaux.score_potentiel / echelle
         manquants = carreaux.score_potentiel.isna() & ~carreaux.a_option_citiz
         if manquants.any():
-            mediane = float(t["scores_potentiel"].score_potentiel.median())
+            mediane = float(s[colonne].median()) / echelle
             avertissements.append(f"{int(manquants.sum())} carreaux sans station Citiz et sans score : médiane {mediane:.2f}")
             carreaux["score_potentiel"] = carreaux.score_potentiel.fillna(mediane)
         carreaux["score_citiz"] = carreaux.pop("score_potentiel").fillna(0.0)
         carreaux["score_modele"] = carreaux.score_citiz  # pour en faire un critère au choix
-        sources["score de potentiel"] = "modèle prédictif (ressemblance avec les carreaux équipés de Citiz)"
+        sources["score de potentiel"] = ("modèle prédictif v2, appris sur les 14 autres réseaux Citiz et testé à "
+                                         "l'aveugle sur Toulouse, pris par son rang" if colonne == "rang_centile"
+                                         else "modèle prédictif (ressemblance avec les carreaux équipés de Citiz)")
     else:
         carreaux["score_citiz"] = 1.0
         sources["score de potentiel"] = "pas encore intégré : la valeur d'un emplacement est sa population nouvellement desservie"
         provisoires.append("score de potentiel")
     carreaux["score_velo"] = carreaux["score_bus"] = 1.0  # décision 11 : sans modèle dédié
+
+    # Ce que Citiz a demandé en plus : ses 8 critères et l'usage mesuré de ses stations.
+    if "criteres_citiz" in t:
+        cc = t["criteres_citiz"].drop_duplicates("idcar_200m")
+        nouvelles = [c for c in cc.columns if c != "idcar_200m" and c not in carreaux]
+        carreaux = carreaux.merge(cc[["idcar_200m", *nouvelles]], on="idcar_200m", how="left")
+        sources["critères Citiz"] = "les 8 critères de l'emplacement idéal, mesurés par carreau (INSEE, GTFS, OSM, arbres)"
+    if "usage_stations" in t:
+        u = t["usage_stations"].drop_duplicates("station_cle")
+        colonnes_u = [c for c in ("occupation_24h", "occupation_jour", "nb_voitures") if c in u]
+        stations = stations.merge(u[["station_cle", *colonnes_u]].rename(columns={"station_cle": "id"}),
+                                  on="id", how="left")
+        sources["usage mesuré"] = "flux GBFS Citiz relevé toutes les 10 minutes (citiz_releves)"
 
     couts = t["couts"]
     noms = {"citiz": "Citiz", "velo": "vélo", "bus": "bus"}
@@ -238,6 +268,8 @@ def assembler(t: dict[str, pd.DataFrame], dossier: Path) -> Donnees:
         communes=t["zone_communes"],
         arrets=t["arrets"],
         population_servie=t.get("population_servie"),
+        places=t.get("places_candidates"),
+        arbres=arbres,
         sources=sources,
         provisoires=provisoires,
         avertissements=avertissements,

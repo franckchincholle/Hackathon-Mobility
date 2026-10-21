@@ -4,7 +4,7 @@
 
 Tout est lu en local au démarrage puis gardé en cache : aucun téléchargement de données
 pendant la démo. Les réglages se passent aussi par l'URL (?budget=citiz&montant=500000&alpha=1
-&fourchette=defaut), ce qu'utilise scripts/captures.py.
+&fourchette=defaut).
 """
 
 import sys
@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from carte import CALQUES, couches, vue  # noqa: E402
-from optim_mobilite import couverture, criteres, equite, scenarios  # noqa: E402
+from optim_mobilite import couverture, criteres, criteres_citiz, equite, impact, rentabilite, scenarios  # noqa: E402
 from optim_mobilite.contrat import charger_donnees  # noqa: E402
 from optim_mobilite.geo import vers_wgs84  # noqa: E402
 from optim_mobilite.scenarios import arrondi, euros, nombre  # noqa: E402
@@ -59,7 +59,47 @@ def score_choisi(version, reglage: str):
     """Score par carreau selon les critères choisis ; None = modèle prédictif (le défaut)."""
     if reglage == "modele":
         return None
+    if reglage == "citiz8":  # l'indice Citiz : moyenne des 8 critères, de 0 à 100 ; neutre si inconnu
+        return (d.carreaux.indice_citiz.fillna(50) / 100).to_numpy()
     return criteres.score(d.carreaux, criteres.Reglage.decoder(reglage))
+
+
+def euros_signe(montant: float) -> str:
+    return ("+" if montant > 0 else "-" if montant < 0 else "") + euros(abs(montant))
+
+
+def entre(fourchette: tuple[float, float], unite: str = "") -> str:
+    """« 212 à 363 » : une fourchette de l'ADEME, arrondie."""
+    return f"{nombre(fourchette[0])} à {nombre(fourchette[1])}{unite}"
+
+
+@st.cache_resource(max_entries=4)
+def criteres_de_citiz(version: str):
+    """Les 8 critères de Citiz et les places, au format de criteres_citiz.py ; None s'ils manquent."""
+    if "indice_citiz" not in d.carreaux:
+        return None
+    colonnes = [c for c in criteres_citiz.COLONNES_CRITERES if c in d.carreaux]
+    places = (d.places.drop_duplicates("idcar_200m").set_index("idcar_200m") if d.places is not None
+              else pd.DataFrame(columns=criteres_citiz.COLONNES_PLACES[1:]))
+    return criteres_citiz.CriteresCitiz(d.carreaux[colonnes].drop_duplicates("idcar_200m").set_index("idcar_200m"),
+                                        places)
+
+
+COLONNES_PLACE = ["rang", "idcar_200m", "lat", "lon", "adresse", "dist_arbre_m", "distance_centre_m"]
+
+
+def places_des_stations(cc, liste: pd.DataFrame) -> pd.DataFrame:
+    """La place de chaque station Citiz proposée : dans son carreau, sinon la plus proche à moins de 300 m."""
+    if cc is None:
+        return pd.DataFrame(columns=COLONNES_PLACE)
+    centres = d.carreaux.drop_duplicates("idcar_200m").set_index("idcar_200m")[["x_3035", "y_3035"]]
+    lignes = []
+    for rang, idcar in liste.loc[liste.type == "citiz", ["rang", "idcar_200m"]].itertuples(index=False):
+        x, y = centres.loc[idcar]
+        place = criteres_citiz.place_la_plus_proche(cc, idcar, float(x), float(y))
+        if place:
+            lignes.append({"rang": rang, "idcar_200m": idcar, **{k: place.get(k) for k in COLONNES_PLACE[2:]}})
+    return pd.DataFrame(lignes, columns=COLONNES_PLACE)
 
 
 def resoudre(budget, types, montant, alpha, fourchette, reglage):
@@ -151,13 +191,18 @@ with st.sidebar:
     effet_equite = st.empty()  # rempli plus bas, une fois le scénario calculé
     st.divider()
     st.markdown("**Zones à potentiel : sur quoi se baser ?**")
+    indice_dispo = "indice_citiz" in d.carreaux and d.carreaux.indice_citiz.notna().any()
+    bases = ["modele"] + (["citiz8"] if indice_dispo else []) + ["criteres"]
+    base_demandee = parametre("score", "modele")
     base_score = st.radio(
-        "Zones à potentiel : sur quoi se baser ?", ["modele", "criteres"], label_visibility="collapsed",
-        index=1 if parametre("score", "modele") == "criteres" else 0,
-        format_func={"modele": "Modèle prédictif", "criteres": "Mes critères"}.get,
+        "Zones à potentiel : sur quoi se baser ?", bases, label_visibility="collapsed",
+        index=bases.index(base_demandee) if base_demandee in bases else 0,
+        format_func={"modele": "Modèle prédictif", "citiz8": "Les 8 critères de Citiz", "criteres": "Mes critères"}.get,
         help="Le modèle prédictif estime le potentiel Citiz d'un emplacement d'après les quartiers où Citiz "
-             "fonctionne déjà. « Mes critères » remplace ce score par les seuls critères que vous cochez, avec "
-             "vos poids : la carte des zones à potentiel et la liste des stations en dépendent alors.",
+             "est déjà installé : appris sur les 14 autres réseaux Citiz, il a été testé à l'aveugle sur "
+             "Toulouse. « Les 8 critères de Citiz » prend la moyenne des 8 critères de l'emplacement "
+             "idéal que Citiz nous a donnés. « Mes critères » remplace ce score par les seuls critères que vous "
+             "cochez, avec vos poids : la carte des zones à potentiel et la liste des stations en dépendent alors.",
     )
     if base_score == "criteres":
         demande = criteres.Reglage.decoder(parametre("criteres", "densite:1"))
@@ -191,6 +236,11 @@ with st.sidebar:
             st.caption(f"Score = {choix_criteres.resume()}.")
         else:
             st.warning("Aucun critère coché : seule la population compte.")
+    elif base_score == "citiz8":
+        reglage = "citiz8"
+        st.caption("Score = indice Citiz, la moyenne des 8 critères de l'emplacement idéal : transports collectifs, "
+                   "densité urbaine, mixité habitat/activité, accessibilité/circulation, simple pour stationner, "
+                   "taux de motorisation faible, visible, arbres à distance.")
     else:
         reglage = "modele"
     st.divider()
@@ -224,6 +274,8 @@ with st.sidebar:
 
 r = resoudre(budget, types, float(montant), alpha, fourchette, reglage)
 rob = robustesse(budget, types, float(montant), alpha, reglage)
+cc = criteres_de_citiz(d.lecture)
+places_proposees = places_des_stations(cc, r.liste)
 k = r.indicateurs
 if alpha > 0:
     k0 = resoudre(budget, types, float(montant), 0.0, fourchette, reglage).indicateurs
@@ -241,17 +293,40 @@ st.title("Où installer les prochaines stations ?")
 st.markdown(f"#### {scenarios.phrase_choc(rob)}")
 c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("Stations proposées", k["nb_stations"])
-c2.metric("Coût total", euros(k["cout_total"]), f"budget {euros(montant)}", delta_color="off")
+c2.metric("Coût total", euros(k["cout_total"]), f"budget {euros(montant)}", delta_color="off", delta_arrow="off")
 c3.metric("Habitants nouvellement desservis", nombre(arrondi(k["habitants_nouveaux"])))
 c4.metric("dont sans aucun transport aujourd'hui", nombre(arrondi(k["habitants_sans_transport_nouveaux"])))
 c5.metric("Coût par habitant gagné (par an)",
           f"{k['cout_total'] / k['habitants_nouveaux']:.0f} €" if k["habitants_nouveaux"] else "—")
+# Usage de référence d'une nouvelle station : l'occupation mesurée de nos voitures de la métropole
+# (pondérée par voiture, arrondie au point), sinon la moyenne du réseau. En-tête et business plan
+# partent du même chiffre.
+existantes_citiz = d.stations[d.stations.type == "citiz"]
+usage_mesure = "occupation_24h" in existantes_citiz and existantes_citiz.occupation_24h.notna().any()
+mesurees = existantes_citiz.dropna(subset=["occupation_24h"]) if usage_mesure else existantes_citiz.iloc[:0]
+occupation_reference = round(float(np.average(
+    mesurees.occupation_24h, weights=mesurees.nb_voitures.fillna(1) if "nb_voitures" in mesurees else None))
+    if usage_mesure else rentabilite.OCCUPATION_RESEAU, 2)
+if budget == "citiz" and k["nb_stations"]:
+    env = k["environnement"]
+    recette_reference = k["voitures_ajoutees"] * float(rentabilite.recette_voiture(occupation_reference))
+    b1, b2, b3, b4, b5 = st.columns(5)
+    b1.metric("Recette prévue par an", euros(recette_reference), f"à {occupation_reference:.0%} d'usage, notre moyenne",
+              delta_color="off", delta_arrow="off")
+    b2.metric("Rentable au-dessus de", f"{rentabilite.occupation_equilibre(scenarios.cout_station(d.couts, 'citiz', fourchette)):.0%} d'usage",
+              f"nos voitures : {occupation_reference:.0%} (mesuré)" if usage_mesure else None, delta_color="off", delta_arrow="off")
+    b3.metric("Investissement d'ouverture", euros(k["investissement"]), f"{k['voitures_ajoutees']} voitures",
+              delta_color="off", delta_arrow="off")
+    b4.metric("Voitures personnelles en moins", entre(env["voitures_en_moins"]), "ADEME 2022", delta_color="off", delta_arrow="off")
+    b5.metric("CO2 évité par an", entre(env["tonnes_co2_evitees"], " t"), "ADEME 2022", delta_color="off", delta_arrow="off")
 
-onglets = st.tabs(["Carte et liste", "Budget → habitants", "Équité", "Robustesse des coûts", "Méthode"])
+(onglet_carte, onglet_business, onglet_impact, onglet_courbe, onglet_equite, onglet_robustesse,
+ onglet_methode) = st.tabs(["Carte et liste", "Business plan", "Impact", "Budget → habitants", "Équité",
+                            "Robustesse des coûts", "Méthode"])
 
 # ---------- carte et liste ----------
 
-with onglets[0]:
+with onglet_carte:
     liste = r.liste.astype({"equipement": str, "commune": str, "iris": str})
     if liste.empty:
         st.info(f"Aucune station ne rentre dans ce budget : une station coûte au moins "
@@ -259,7 +334,7 @@ with onglets[0]:
     potentiel = potentiel_candidats(d.lecture, budget, types, alpha, reglage) if "potentiel" in choix else pd.DataFrame()
     st.pydeck_chart(
         pdk.Deck(
-            layers=couches(d, choix, r, structure(d, d.lecture, budget, types), potentiel, commune),
+            layers=couches(d, choix, r, structure(d, d.lecture, budget, types), potentiel, commune, places_proposees),
             initial_view_state=vue(d, liste, commune),
             map_provider="carto" if fond else None,
             map_style=None,  # fond Carto accordé au thème de Streamlit
@@ -290,6 +365,56 @@ with onglets[0]:
     if "score de potentiel" in d.provisoires and reglage == "modele":
         tableau = tableau.drop(columns="Score du modèle")
     st.dataframe(tableau, hide_index=True, width="stretch")
+
+    # La fiche d'une station : ce que Citiz regarde avant d'ouvrir (ses 8 critères, la place, le compte).
+    proposees = liste[liste.type == "citiz"]
+    if cc is not None and len(proposees):
+        st.markdown("**Fiche d'une station proposée**")
+        rang_choisi = st.selectbox("Station", proposees.rang.tolist(), label_visibility="collapsed",
+                                   format_func=lambda n: f"Station n° {n} · {proposees.set_index('rang').commune[n]}")
+        station = proposees[proposees.rang == rang_choisi].iloc[0]
+        gauche, droite = st.columns([1.3, 1])
+        if station.idcar_200m in cc.criteres.index:
+            notes = criteres_citiz.notes_radar(cc, station.idcar_200m)
+            notes["info"] = notes.note.round(0).astype(int).astype(str) + " / 100" + np.where(
+                notes.mesure, "", " (non mesuré ici)")
+            base_notes = alt.Chart(notes).encode(
+                x=alt.X("note:Q", title="Note sur 100 (rang dans la métropole)", scale=alt.Scale(domain=[0, 100])),
+                y=alt.Y("libelle:N", title=None, sort=notes.libelle.tolist(),
+                        axis=alt.Axis(labelLimit=260, labelOverlap=False)),
+                tooltip=["libelle:N", "info:N"],
+            )
+            barres = base_notes.mark_bar(color="#32b4b5")
+            valeurs = base_notes.mark_text(align="left", dx=4, color="#616060").encode(
+                text=alt.Text("note:Q", format=".0f"))
+            gauche.altair_chart((barres + valeurs).properties(
+                height=320, title=f"Les 8 critères de Citiz · indice "
+                                  f"{cc.criteres.indice_citiz[station.idcar_200m]:.0f} / 100"), width="stretch")
+        recette = rentabilite.VOITURES_PAR_STATION * float(rentabilite.recette_voiture(occupation_reference))
+        lignes_fiche = [
+            f"Habitants gagnés à 5 minutes : {nombre(arrondi(station.population_nouvelle))}",
+            f"Recette à notre usage moyen ({occupation_reference:.0%}) : {euros(recette)} par an, pour "
+            f"{euros(station.cout)} de coût complet",
+        ]
+        place = places_proposees[places_proposees.rang == rang_choisi]
+        if len(place):
+            place = place.iloc[0]
+            details = ["arbre le plus proche à " + f"{place.dist_arbre_m:.0f} m" if pd.notna(place.dist_arbre_m)
+                       else "arbres non mesurés dans cette commune"]
+            if place.distance_centre_m > 0:
+                details.append(f"à {place.distance_centre_m:.0f} m du centre du carreau")
+            adresse = place.adresse if isinstance(place.adresse, str) and place.adresse else "adresse inconnue"
+            lignes_fiche.insert(0, f"Place proposée : {adresse} ({', '.join(details)})")
+        else:
+            lignes_fiche.insert(0, "Place proposée : aucun parking public à moins de 300 m, à trouver sur place")
+        par_carreau = d.carreaux.set_index("idcar_200m")
+        if "raison_1" in par_carreau and station.idcar_200m in par_carreau.index:
+            raisons = [par_carreau.at[station.idcar_200m, f"raison_{i}"] for i in (1, 2, 3)]
+            raisons = [r_ for r_ in raisons if isinstance(r_, str) and r_]
+            if raisons:
+                lignes_fiche.append("Ce que voit le modèle : " + " ; ".join(raisons).lower())
+        droite.markdown("\n".join(f"- {t}" for t in lignes_fiche))
+
     export = liste.assign(
         population_nouvelle=arrondi(liste.population_nouvelle),
         dont_sans_transport=arrondi(liste.dont_sans_transport),
@@ -301,9 +426,130 @@ with onglets[0]:
                        file_name=f"{'PROVISOIRE_' if d.est_provisoire else ''}emplacements_{budget}_{montant}_alpha{alpha:g}_{fourchette}.csv",
                        mime="text/csv")
 
+# ---------- business plan : ce que les stations rapportent à Citiz ----------
+
+with onglet_business:
+    if budget != "citiz":
+        st.info("Le business plan porte sur les stations Citiz : choisir le budget Citiz dans la barre latérale.")
+    else:
+        cout = scenarios.cout_station(d.couts, "citiz", fourchette)
+        equilibre = rentabilite.occupation_equilibre(cout)
+        moyenne = occupation_reference
+        texte = (f"Une station de 2 voitures coûte {euros(cout)} par an, amortissements compris. Elle couvre ce coût "
+                 f"au-dessus de {equilibre:.0%} d'occupation, soit {euros(rentabilite.recette_voiture(equilibre))} "
+                 "de recette par voiture et par an.")
+        if usage_mesure:
+            texte += (f" Nos voitures de la métropole sont en location {moyenne:.0%} du temps (mesuré) : "
+                      "c'est l'emplacement qui fait la marge.")
+        st.markdown(texte)
+        cz = r.liste[r.liste.type == "citiz"]
+        if cz.empty:
+            st.info("Aucune station Citiz dans ce scénario.")
+        else:
+            st.markdown(f"**Le plan : {len(cz)} stations, {rentabilite.VOITURES_PAR_STATION * len(cz)} voitures**")
+            visee = st.slider(
+                "Occupation visée des nouvelles stations (part du temps en location)", 5, 70,
+                int(round(moyenne * 100)), 1, format="%d %%",
+                help="Par défaut, l'usage moyen mesuré de nos voitures. On ne prédit pas l'usage station par "
+                     "station : sur 30 heures de relevés, aucune variable ne le prévoit encore de façon fiable "
+                     "(modele/RESULTATS.md). Le curseur montre ce que le plan rapporte selon l'usage atteint.",
+            ) / 100
+            plan = rentabilite.comptes(np.full(len(cz), visee), cout, fourchette)
+            tresorerie = rentabilite.tresorerie(plan.flux.to_numpy(), fourchette, annees=8)
+            point_mort = next((int(a) for a, v in zip(tresorerie.annee, tresorerie.cumul) if v >= 0), None)
+            p1, p2, p3, p4 = st.columns(4)
+            p1.metric("Recette par an", euros(plan.recette.sum()))
+            p2.metric("Résultat par an", euros_signe(plan.resultat.sum()), "après coût complet", delta_color="off", delta_arrow="off")
+            p3.metric("Investissement d'ouverture", euros(len(cz) * rentabilite.INVESTISSEMENT[fourchette]))
+            delai = plan.delai_ans.iat[0]
+            p4.metric("Chaque station est remboursée en", f"{delai:.1f} ans".replace(".", ",") if np.isfinite(delai)
+                      else "jamais")
+            courbe_tresorerie = alt.Chart(tresorerie).mark_area(line={"color": "#32b4b5"}, color="#DBF4F4").encode(
+                x=alt.X("annee:Q", title="Années après l'ouverture", axis=alt.Axis(tickMinStep=1)),
+                y=alt.Y("cumul:Q", title="Trésorerie cumulée (€)", axis=alt.Axis(format="~s")),
+                tooltip=[alt.Tooltip("annee:Q", title="année"), alt.Tooltip("cumul:Q", format=",.0f", title="cumul")],
+            )
+            zero = alt.Chart(pd.DataFrame({"y": [0]})).mark_rule(color="#616060").encode(y="y:Q")
+            st.altair_chart((courbe_tresorerie + zero).properties(height=300), width="stretch")
+            st.caption(f"Les {len(cz)} stations ouvrent l'année 0 ({euros(-tresorerie.cumul.iat[0])} investis). "
+                       + (f"Le plan est remboursé au bout de {point_mort} ans." if point_mort
+                          else "À ce niveau d'usage, le plan n'est pas remboursé en 8 ans."))
+            # chaque station proposée : où la poser, et ce qu'en disent les critères de Citiz
+            par_carreau = d.carreaux.set_index("idcar_200m")
+            stations_plan = pd.DataFrame({"Rang": cz.rang.to_numpy(), "Commune": cz.commune.astype(str).to_numpy()})
+            if len(places_proposees):
+                par_rang = places_proposees.set_index("rang")
+                stations_plan["Place proposée"] = cz.rang.map(par_rang.adresse).fillna("à trouver sur place").to_numpy()
+                stations_plan["Arbre le plus proche"] = cz.rang.map(par_rang.dist_arbre_m).map(
+                    lambda m: f"{m:.0f} m" if pd.notna(m) else "non mesuré").to_numpy()
+            if "indice_citiz" in par_carreau:
+                stations_plan["Indice Citiz"] = cz.idcar_200m.map(par_carreau.indice_citiz).round(0).to_numpy()
+            stations_plan["Habitants gagnés"] = arrondi(cz.population_nouvelle)
+            st.dataframe(stations_plan, hide_index=True, width="stretch")
+        st.markdown("**Le compte d'une station selon son usage**")
+        comptes_types = rentabilite.comptes([0.05, moyenne, equilibre, 0.40, 0.50], cout, fourchette)
+        st.dataframe(pd.DataFrame({
+            "Occupation": [f"{o:.0%}" for o in comptes_types.occupation],
+            "Cas": ["station qui dort", "moyenne mesurée", "équilibre", "bien placée", "très bien placée"],
+            "Recette par an": comptes_types.recette.map(euros),
+            "Résultat par an": comptes_types.resultat.map(euros_signe),
+            "Délai de retour": comptes_types.delai_ans.map(lambda a: f"{a:.1f} ans".replace(".", ",")
+                                                           if np.isfinite(a) else "jamais"),
+        }), hide_index=True, width="stretch")
+        if usage_mesure:
+            st.markdown("**L'usage mesuré de nos stations**")
+            dormantes = mesurees[mesurees.occupation_24h < 0.05]
+            saturees = mesurees[mesurees.occupation_24h > 0.7]
+            nb = (lambda s: int(s.nb_voitures.sum())) if "nb_voitures" in mesurees else len
+            st.markdown(f"{len(dormantes)} stations ont servi moins de 5 % du temps pendant la mesure ({nb(dormantes)} "
+                        f"voitures) ; {len(saturees)} ont dépassé 70 % ({nb(saturees)} voitures). Avant d'ouvrir, on "
+                        "peut déplacer des voitures des unes vers les autres.")
+            st.altair_chart(alt.Chart(mesurees.assign(pct=mesurees.occupation_24h * 100)).mark_bar(color="#32b4b5").encode(
+                x=alt.X("pct:Q", bin=alt.Bin(step=10), title="Part du temps en location (%)"),
+                y=alt.Y("count():Q", title="Stations"),
+            ).properties(height=220), width="stretch")
+            gauche, droite = st.columns(2)
+            colonnes = {"nom": "Station", "nb_voitures": "Voitures", "occupation_24h": "En location"}
+            for colonne_st, titre, df in ((gauche, "Saturées", saturees), (droite, "Qui dorment", dormantes)):
+                colonne_st.markdown(titre)
+                colonne_st.dataframe(df[[c for c in colonnes if c in df]].rename(columns=colonnes)
+                                     .assign(**{"En location": lambda x: x["En location"].map(lambda o: f"{o:.0%}")}),
+                                     hide_index=True, width="stretch")
+            st.caption("Mesure : flux GBFS de Citiz relevé toutes les 10 minutes (table citiz_releves). Les premiers "
+                       "jours ne couvrent pas de week-end : la mesure s'affine à chaque relevé.")
+
+# ---------- impact : ce que les stations changent pour la ville et les ménages ----------
+
+with onglet_impact:
+    soc = k["social"]
+    if budget == "citiz":
+        env = k["environnement"]
+        st.markdown(f"Ce que changent, chaque année, les {k['voitures_ajoutees']} voitures partagées de ce scénario "
+                    "(enquête nationale sur l'autopartage, ADEME 2022 ; émissions : ADEME Base Empreinte).")
+        e1, e2, e3, e4 = st.columns(4)
+        e1.metric("Voitures personnelles en moins", entre(env["voitures_en_moins"]))
+        e2.metric("Voirie rendue à la ville", entre(env["m2_liberes"], " m²"),
+                  f"{entre(env['places_liberees'])} places", delta_color="off", delta_arrow="off")
+        e3.metric("Kilomètres en voiture évités", entre(env["km_evites"]))
+        e4.metric("CO2 évité", entre(env["tonnes_co2_evitees"], " t"))
+    st.markdown("Qui gagne une station à 5 minutes à pied :")
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Habitants nouvellement desservis", nombre(arrondi(soc["habitants"])))
+    s2.metric("Ménages sans voiture", nombre(arrondi(soc["menages_sans_voiture"]))
+              if np.isfinite(soc["menages_sans_voiture"]) else "-")
+    deja = impact.social(d.carreaux, np.flatnonzero(d.carreaux.a_option_citiz.to_numpy()))
+    s3.metric("Vivent dans la moitié la plus modeste", f"{soc['part_sous_mediane']:.0%}"
+              if np.isfinite(soc["part_sous_mediane"]) else "-",
+              f"{deja['part_sous_mediane']:.0%} chez ceux qui ont déjà une Citiz" if np.isfinite(deja["part_sous_mediane"])
+              else None, delta_color="off", delta_arrow="off")
+    s4.metric("Logements sociaux", nombre(arrondi(soc["logements_sociaux"])) if np.isfinite(soc["logements_sociaux"]) else "-")
+    st.caption("Moitié la plus modeste : sous le niveau de vie médian des habitants de la métropole (INSEE Filosofi). "
+               "La Métropole rembourse la moitié des trajets Citiz des ménages modestes, jusqu'à 1 000 € par an "
+               "(livre blanc Citiz 2026) : ces stations rendent l'aide utilisable là où ils vivent.")
+
 # ---------- courbe budget -> habitants ----------
 
-with onglets[1]:
+with onglet_courbe:
     cb = courbe(d.lecture, budget, types, alpha, fourchette, maximum, pas * 2, reglage)
     st.markdown("Chaque euro supplémentaire touche moins d'habitants que le précédent : les premières "
                 "stations vont là où la population est la plus dense, les suivantes complètent.")
@@ -324,7 +570,7 @@ with onglets[1]:
 
 # ---------- équité ----------
 
-with onglets[2]:
+with onglet_equite:
     cmp = comparer_alpha(d.lecture, budget, types, float(montant), fourchette, reglage)
     st.markdown(f"Même budget ({euros(montant)}, {dict(bas='coûts bas', defaut='coûts par défaut', haut='coûts hauts')[fourchette]}), **α = 0** (efficacité pure) contre "
                 f"**α = {cmp['alpha_haut']:g}** (priorité aux zones sans aucun transport).")
@@ -353,7 +599,7 @@ with onglets[2]:
 
 # ---------- robustesse ----------
 
-with onglets[3]:
+with onglet_robustesse:
     st.markdown(
         f"Coûts bas : **{rob['nb_bas']} stations** · coûts hauts : **{rob['nb_haut']} stations**. "
         f"**{rob['part_haut_dans_bas']:.0%}** des stations retenues en coûts hauts le sont aussi en coûts bas."
@@ -371,7 +617,7 @@ with onglets[3]:
 
 # ---------- méthode ----------
 
-with onglets[4]:
+with onglet_methode:
     st.markdown(f"""
 **Comment l'outil choisit, en trois phrases.**
 1. Pour chaque emplacement possible, on compte les habitants à moins de 400 m (5 minutes à pied) qui n'ont

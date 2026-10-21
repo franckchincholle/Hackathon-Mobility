@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "potentiel_v2",
+    "description": "Score de potentiel Citiz v2 : test à l'aveugle sur Toulouse, calibration, usage, raisons"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "ee7823ad-ac45-4208-911f-15390f4ec869"
+  }
+}

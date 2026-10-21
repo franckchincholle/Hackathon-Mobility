@@ -1,0 +1,4 @@
+# Dépendances du site, plus les outils de test : ./start.sh --tests
+# (ou .venv/bin/python -m pytest tests -q depuis optimisation/).
+-r requirements.txt
+pytest==9.1.1

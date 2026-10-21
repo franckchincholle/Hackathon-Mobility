@@ -6,9 +6,9 @@ Power BI ne recalcule rien : il filtre une grille de scénarios déjà optimisé
 
 Elles viennent de deux sources possibles :
 
-- en local, avec `python scripts/precalculer_powerbi.py`, qui écrit dans `sorties/powerbi/` (en CSV
-  UTF-8 et en Parquet) ;
-- dans Fabric, **plus tard**, avec la dernière cellule du notebook `notebooks/optimisation_fabric.ipynb`
+- en local, avec `precalculer_powerbi.py` (gardé en local par MSc 4), qui écrit dans `sorties/powerbi/` (en
+  CSV UTF-8 et en Parquet) ;
+- dans Fabric, **plus tard**, avec la dernière cellule du notebook `optimisation_fabric` de l'espace
   (`ECRIRE = True`), qui écrit les tables Delta `optim_scenarios` et `optim_selections`. Rien ne sera écrit
   avant que les données soient définitives. Tant qu'une brique est provisoire, les fichiers locaux sont
   préfixés `PROVISOIRE_`.

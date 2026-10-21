@@ -1,10 +1,10 @@
 # Décisions et pourquoi (MSc 4)
 
 Chaque choix de l'optimisation, avec la raison et ce qu'on a écarté. Les chiffres viennent des **données
-réelles de MSc 1** (Toulouse Métropole, 7 070 carreaux, 739 446 habitants). Ils restent **provisoires** tant
-que manquent l'accessibilité de MSc 2 et les coûts du vélo et du bus (MBA). Le score de MSc 3 et le coût
-Citiz du MBA sont intégrés. Pour les recalculer :
-`scripts/comparer_exact.py` et l'application.
+réelles de MSc 1** (Toulouse Métropole, 7 070 carreaux, 739 446 habitants). Depuis la nuit du 20 au 21
+octobre, toutes les briques sont livrées : l'accessibilité de MSc 2, le modèle de MSc 3 (repris en v2 le 21/10) et les coûts du MBA pour
+Citiz, le vélo et le bus. Les chiffres datés d'avant ces livraisons sont recalculés dans `docs/ORAL.md` ; pour
+les recalculer : `comparer_exact.py` (gardé en local par MSc 4) et l'application.
 
 ## 0. On suit les choix déjà faits par l'équipe
 
@@ -13,7 +13,7 @@ Citiz du MBA sont intégrés. Pour les recalculer :
 | Toulouse Métropole | décision 1, `zone_communes` de MSc 1 | elle travaille sur les 7 070 carreaux de la zone |
 | EPSG:3035, `idcar_200m` | notebooks de MSc 1 | elle calcule toutes ses distances en EPSG:3035 |
 | 400 m autour du centre du carreau | décision 4, `RAYON_M` de MSc 1 | même rayon, frontière comprise |
-| Une option = une ligne distincte ou une station vélo / Citiz | décision 3, `arrets_lignes` de MSc 1 | calcul provisoire de `nb_options` (en attendant MSc 2) |
+| Une option = une ligne distincte ou une station vélo / Citiz | décision 3, `arrets_lignes` de MSc 1 | `nb_options` de MSc 2 (`acces_carreau`) ; le calcul provisoire reste en repli |
 | Valeur = population nouvellement desservie × score | décision 7 | score de l'**emplacement**, appliqué au gain du candidat |
 | Habitants retirés après chaque choix | décisions 6 et 9 | chaque habitant ne compte qu'une fois |
 
@@ -96,6 +96,10 @@ un score très faible aux zones sans transport : il a appris où Citiz s'est ins
 dense et déjà desservie (limite assumée de la décision 7). Le score de l'emplacement l'emporte donc sur le
 bonus d'équité. Pour la collectivité, sans score, le curseur joue pleinement.
 
+Avec le modèle v2 pris par son rang (21/10), le curseur joue un peu plus pour Citiz : de α = 0 à α = 3, les
+habitants sans transport gagnés passent de 160 à 1 010, pour 5 % d'habitants desservis en moins (de 85 940 à
+81 530). Le constat tient : l'autopartage seul ne comblera pas les zones sans transport.
+
 C'est un résultat à présenter tel quel. Si l'équipe veut que l'équité pèse aussi pour Citiz, il y a deux
 pistes, à décider ensemble :
 
@@ -116,8 +120,10 @@ score de l'emplacement candidat.
   valides.
 - La version exacte rattache chaque habitant à une seule station posée, et il vaut le score de cette station
   (décision 9).
-- MSc 3 a livré le 20/10 (`scores_potentiel_msc3`, 7 070 carreaux). Le site le lit en direct dans Fabric.
-  Sans score, il vaudrait 1, et l'écran l'indiquerait.
+- MSc 3 a livré le 20/10 (`scores_potentiel_msc3`, 7 070 carreaux). Depuis le 21/10, le site lit à sa place
+  le modèle v2 (`scores_potentiel_v2`), qui le reprend, et le prend par son rang : sa probabilité calibrée
+  varie trop d'un carreau à l'autre pour être multipliée par les habitants. Sans score, il vaudrait 1, et
+  l'écran l'indiquerait.
 
 ## 7. Population nouvellement desservie : par type d'équipement
 
@@ -194,7 +200,7 @@ une grille précalculée (588 scénarios) pour Power BI.
 
 - Streamlit fait tourner le vrai algorithme à chaque mouvement de curseur.
 - Power BI ne peut que filtrer des scénarios déjà calculés.
-- Plan B : `scripts/captures.py`, et un mode sans fond de carte.
+- Plan B : un mode sans fond de carte.
 
 ## 13. Vélo et bus : sans modèle dédié (décision 11)
 
@@ -233,9 +239,10 @@ Le budget devient donc un **budget annuel**.
 - Le classeur vérifie son chiffre avec des repères indépendants. Le coût par défaut est de 10 373 € par voiture
   et par an, dans le seuil de rentabilité indiqué par Citiz lui-même : 8 400 à 10 800 € par voiture et par an.
 
-**Ce qui reste MOCK** : le vélo et le bus, jusqu'à la livraison du MBA.
+**Ce qui reste MOCK** : plus rien depuis la livraison du classeur vélo et bus du MBA (548 € par an pour un
+arrêt de bus, 24 495 € pour une station de 10 vélos) ; les lignes MOCK ne servent qu'en repli.
 
-**Import** : `scripts/importer_couts_mba.py` lit la ligne par son libellé, pas par son numéro, pour qu'une ligne
+**Import** : `couts_mba.py` lit la ligne par son libellé, pas par son numéro, pour qu'une ligne
 ajoutée au classeur ne casse rien.
 
 ## 16. Lecture en direct sur Fabric
@@ -250,7 +257,7 @@ ou à la demande avec le bouton « Mettre à jour les données ». Rien n'est ja
 - Chaque lecture réussie est gardée dans `data/reel/`. Si Fabric ou le réseau tombe, le site repart de cette
   copie et l'affiche.
 - Chaque calcul mis en cache porte la version des données, pour ne jamais mélanger deux versions.
-- Une table écrite par Spark avec des « deletion vectors » (le score) est lue par DuckDB, car `deltalake` ne
+- Une table écrite par Spark avec des « deletion vectors » (l'ancien score de MSc 3) est lue par DuckDB, car `deltalake` ne
   sait pas encore les lire.
 
 ## 17. Zones à potentiel selon des critères choisis

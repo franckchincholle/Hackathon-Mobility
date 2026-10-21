@@ -10,8 +10,9 @@ Arborescence d'un dossier de données (config.toml) :
     msc1/   carreaux, zone_communes, arrets, arrets_lignes, stations_partagees,
             tisseo_routes, tisseo_trips, tisseo_shapes          (obligatoire)
     msc2/   accessibilite                                       (facultatif)
-    msc3/   scores_potentiel                                    (facultatif)
+    msc3/   scores_potentiel (le modèle prédictif v2)           (facultatif)
     mba/    couts                                               (facultatif)
+    citiz/  arbres, criteres_citiz, places_candidates, usage_stations  (facultatif)
 """
 
 from __future__ import annotations
@@ -61,10 +62,17 @@ COLONNES = {
     "accessibilite": {"idcar_200m": "str", "nb_options": "int", "sous_seuil": "bool"},
     # MSc 2 : population servie par chaque station existante (carte de l'objectif 2)
     "population_servie": {"station_id": "str", "population_servie": "float"},
-    # MSc 3 : score de potentiel de chaque carreau sans station (décision 7)
+    # modèle prédictif (modele/potentiel_v2, qui reprend celui de MSc 3) : score de potentiel de chaque
+    # carreau (décision 7) ; facultatif : rang_centile (0 à 100, ce que l'optimisation utilise), classe, raisons
     "scores_potentiel": {"idcar_200m": "str", "score_potentiel": "float"},
     # MBA : coût complet d'une station et par an, trois niveaux (classeur « Coût citiz.xlsx »)
     "couts": {"type": "str", "cout_bas": "float", "cout_defaut": "float", "cout_haut": "float", "budget": "str"},
+    # les 8 critères de Citiz par carreau (notes de 0 à 100) et leur moyenne, l'indice Citiz
+    "criteres_citiz": {"idcar_200m": "str", "indice_citiz": "float"},
+    # la place proposée dans chaque carreau : un parking sans arbre à moins de 10 m
+    "places_candidates": {"idcar_200m": "str", "lat": "float", "lon": "float"},
+    # occupation mesurée de chaque station Citiz existante (citiz_releves)
+    "usage_stations": {"station_cle": "str", "occupation_24h": "float"},
 }
 FOURCHETTES = ("bas", "defaut", "haut")
 # Ancien format (installation + 1 an de fonctionnement, deux niveaux), encore accepté.
@@ -75,7 +83,7 @@ TABLES = {
     "msc2": ("accessibilite", "population_servie"),
     "msc3": ("scores_potentiel",),
     "mba": ("couts",),
-    "citiz": ("arbres",),
+    "citiz": ("arbres", "criteres_citiz", "places_candidates", "usage_stations"),
 }
 FACULTATIVES_MSC1 = ("carreaux_variables", "iris")
 # Emprise de la France métropolitaine en EPSG:3035 : au-delà, les coordonnées sont sûrement
@@ -99,6 +107,7 @@ class Donnees:
     couts : indexé par type
     communes : code_commune, nom, contour_geojson (si MSc 1 l'a copié) ; arrets : la table de MSc 1
     population_servie : station_id, population_servie (carte de l'objectif 2 de MSc 2), ou None
+    places : la place proposée par carreau (idcar_200m, lat, lon, dist_arbre_m, adresse), ou None
     sources : d'où vient chaque brique ; provisoires : celles qui attendent un autre rôle
     """
 
@@ -110,6 +119,8 @@ class Donnees:
     communes: pd.DataFrame | None = None
     arrets: pd.DataFrame | None = None  # tous les arrêts de MSc 1 (modes, nom), pour la carte
     population_servie: pd.DataFrame | None = None
+    places: pd.DataFrame | None = None
+    arbres: pd.DataFrame | None = None  # une ligne par arbre : x_3035, y_3035, lat, lon
     lecture: str = ""  # d'où et quand les données ont été lues
     sources: dict[str, str] = field(default_factory=dict)
     provisoires: list[str] = field(default_factory=list)
@@ -257,6 +268,8 @@ def depuis_tables(brut: dict[str, pd.DataFrame], dossier: Path | str = ".") -> D
         s = tables["scores_potentiel"]
         if not s.score_potentiel.between(0, 1).all():
             raise ErreurContrat("scores_potentiel.score_potentiel : valeurs hors de [0, 1]")
+        if "rang_centile" in s and not s.rang_centile.between(0, 100).all():
+            raise ErreurContrat("scores_potentiel.rang_centile : valeurs hors de [0, 100]")
         if s.idcar_200m.duplicated().any():
             raise ErreurContrat("scores_potentiel.idcar_200m : identifiants en double")
     tables["couts"] = completer_couts(brut.get("couts"))

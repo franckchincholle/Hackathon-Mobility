@@ -9,8 +9,9 @@ Lu à chaque fois :
   stations_partagees, et le code IRIS des carreaux (carreaux_variables, iris) ;
 - le tracé des lignes Tisséo, dans le GTFS brut le plus récent (Files/brut/gtfs/<jour>/),
   téléchargé seulement quand un nouveau jour apparaît ;
-- dès qu'elles existent : accessibilite, population_servie, le score de potentiel, la table
-  couts, ou un classeur de coûts déposé dans Files/mba/.
+- dès qu'elles existent : accessibilite (ou acces_carreau, la carte de MSc 2), population_servie,
+  le score du modèle prédictif (scores_potentiel_v2), la table couts ou un classeur de coûts déposé
+  dans Files/mba/, et les tables de Citiz : arbres, criteres_citiz, places_candidates, usage_stations.
 
 Rien n'est jamais écrit dans Fabric.
 """
@@ -51,16 +52,23 @@ FACULTATIVES = {
                                                   "voitures_par_menage", "commerces_alimentaires_5min", "sante_5min",
                                                   "enseignement_5min", "services_5min", "gares_5min"]),
     "iris": ("iris", ["code_iris", "nom_iris", "type_iris"]),
-    "arbres": ("arbres", None),  # demande de Citiz : une ligne par arbre (lat/lon ou x_3035/y_3035)
+    "arbres": ("arbres", ["lat", "lon", "x_3035", "y_3035"]),  # demande de Citiz : une ligne par arbre
     "accessibilite": ("accessibilite", None),
+    # la carte de MSc 2, livrée sous ce nom et avec ses propres noms de colonnes (RENOMMAGES)
+    "acces_carreau": ("accessibilite", ["idcar_200m", "options", "grise", "options_1000_hab"]),
     "population_servie": ("population_servie", None),
-    "scores_potentiel_msc3": ("scores_potentiel", ["idcar_200m", "score_potentiel"]),
-    "scores_potentiel": ("scores_potentiel", ["idcar_200m", "score_potentiel"]),
+    # le modèle prédictif (modele/potentiel_v2) : probabilité calibrée, rang de 0 à 100, classe et raisons
+    "scores_potentiel_v2": ("scores_potentiel", ["idcar_200m", "score_potentiel", "rang_centile", "classe",
+                                                 "raison_1", "raison_2", "raison_3"]),
+    "criteres_citiz": ("criteres_citiz", None),  # les 8 critères de « l'emplacement idéal » de Citiz
+    "places_candidates": ("places_candidates", None),  # une place de parking loin des arbres par carreau
+    "usage_stations": ("usage_stations", None),  # occupation mesurée des stations Citiz existantes
     "couts": ("couts", None),
 }
+RENOMMAGES = {"acces_carreau": {"options": "nb_options", "grise": "sous_seuil", "options_1000_hab": "options_pour_1000"}}
 # où ranger chaque table dans la copie locale (sous-dossiers de data/reel/)
 RANGEMENT = {"accessibilite": "msc2", "population_servie": "msc2", "scores_potentiel": "msc3", "couts": "mba",
-             "arbres": "citiz"}
+             "arbres": "citiz", "criteres_citiz": "citiz", "places_candidates": "citiz", "usage_stations": "citiz"}
 
 
 class FabricInjoignable(RuntimeError):
@@ -187,7 +195,7 @@ def lire(cache: Path, jeton_stockage: str | None = None) -> tuple[dict[str, pd.D
             if cle in tables:
                 continue
             try:
-                tables[cle] = _table(racine, nom, acces, colonnes)
+                tables[cle] = _table(racine, nom, acces, colonnes).rename(columns=RENOMMAGES.get(nom, {}))
             except TableNotFoundError:
                 continue
             trouvees.append(nom)
