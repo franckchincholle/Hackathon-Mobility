@@ -58,3 +58,4 @@ pour tout l'espace : un territoire à la fois, puis remettre le jeu par défaut.
 - [SOURCES.md](SOURCES.md) : l'origine de chaque donnée.
 - [docs/business_plan.md](docs/business_plan.md) : le business plan.
 - [presentation/](presentation/) : le support de la soutenance.
+
