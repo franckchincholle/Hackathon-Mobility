@@ -21,7 +21,7 @@ sur les données ouvertes ; les autres chiffres renvoient à leur source ([SOURC
 ## Cinq phrases pour l'oral
 
 1. « Une voiture particulière est inutilisée 95 % du temps. Les nôtres sont en location 29 % du temps : six fois plus. »
-2. « Le même investissement de 58 000 € perd 17 500 € par an ou en rapporte 14 100. La différence, c'est l'emplacement. »
+2. « Le même investissement de 58 000 € perd 17 500 € par an ou dégage 14 100 € de bénéfice. La différence, c'est l'emplacement. »
 3. « Il nous manque 200 voitures pour 2030. L'outil dit où les mettre, station par station, et nous prévient quand une station décroche. »
 4. « 82 % des habitants que nous gagnons vivent dans la moitié la plus modeste de la métropole, où la Métropole rembourse déjà la moitié de nos trajets. »
 5. « Chaque voiture Citiz retire 5 à 8 voitures de la rue : nos 46 nouvelles voitures rendent jusqu'à 1 380 m² à la ville. »
@@ -58,9 +58,11 @@ par ce que la station dégage avant amortissements.
    environ 17 500 € par an de plus qu'elle ne rapporte. Le collecteur tourne déjà dans Microsoft
    Fabric : la mesure s'allonge toute seule.
 2. **Ouvrir les 23 premières stations de la liste** (46 voitures, 500 k€ par an de coût complet,
-   1,34 M€ d'investissement si les voitures sont achetées). À notre usage moyen (29 %), elles
-   rapportent 468 k€ par an, à 3 % de leur coût complet ; à 35 % d'usage, elles dégagent 82 k€
-   par an et sont remboursées en 3,8 ans ; à 40 %, 163 k€ par an et 3,1 ans.
+   1,34 M€ d'investissement si les voitures sont achetées). À notre usage actuel (29 %), elles
+   encaissent 468 k€ de recette par an pour 483 k€ de coûts : le plan est à l'équilibre, à 15 k€
+   près, et ajoute 20 % au chiffre d'affaires de Citiz Occitanie (2,38 M€ en 2025). Le bénéfice
+   commence au-dessus de 30 % d'usage : 82 k€ par an à 35 %, avec un investissement remboursé en
+   3,8 ans ; 163 k€ par an à 40 %, remboursé en 3,1 ans.
 3. **Continuer au rythme de +20 % de stations par an**, celui que vise la Métropole, jusqu'aux 400
    voitures de 2030. L'outil se relance chaque année sur les nouvelles données.
 4. **Financer avec nos sociétaires** : 15 parts sociales de 750 € financent une voiture ; une

@@ -62,9 +62,10 @@ Le total, 10 373 € par voiture et par an, tombe dans votre propre seuil. On te
 basse et haute.
 
 **11. Combien ça rapporte, et quand ?**
-À notre usage moyen mesuré, 29 %, les 23 stations rapportent 468 k€ par an, à 3 % de leur coût complet. À 35 %,
-elles dégagent 82 k€ par an et sont remboursées en 3,8 ans. Le premier gain est ailleurs : une station qui
-dort coûte 17 500 € par an, et l'outil évite d'en ouvrir.
+À notre usage actuel, 29 %, les 23 stations encaissent 468 k€ de recette par an pour 483 k€ de coûts : le plan
+est à l'équilibre, et ajoute 20 % au chiffre d'affaires de Citiz Occitanie. Le bénéfice commence au-dessus de
+30 % : 82 k€ par an à 35 %, avec un investissement remboursé en 3,8 ans. Le premier gain est ailleurs : une
+station qui dort perd 17 500 € par an, et l'outil évite d'en ouvrir.
 
 **12. Trente heures de mesure, c'est solide ?**
 Pour prédire l'usage station par station, non, et nous le disons : la corrélation n'est que de 0,14. Pour
