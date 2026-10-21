@@ -15,7 +15,8 @@ body.avec-notes #scene{bottom:32vh}
 .slide{position:absolute;left:0;top:0;width:1920px;height:1080px;background:#fff;overflow:hidden;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility 0s linear .45s}
 .slide.active{opacity:1;visibility:visible;transition:opacity .45s ease}
 html:not(.js) .slide{position:relative;opacity:1;visibility:visible}
-@media (prefers-reduced-motion:reduce){.slide,.slide.active{transition:none}}
+#fil{position:absolute;left:0;bottom:0;width:0;height:8px;background:var(--turq);transition:width .45s ease}
+@media (prefers-reduced-motion:reduce){.slide,.slide.active,#fil{transition:none}}
 .slide p,.slide h2,.slide figure,.slide ol{margin:0}
 .slide .bloc{position:absolute}
 .notes{display:none}
@@ -138,7 +139,7 @@ body.aide #aide{display:block}
   #pont{position:static;transform:none!important;width:1920px;height:auto}
   .slide{position:relative!important;opacity:1!important;visibility:visible!important;transition:none!important;break-after:page;page-break-after:always}
   .slide:last-child{break-after:auto;page-break-after:auto}
-  #panneau-notes,#noir,#aide,.notes{display:none!important}
+  #panneau-notes,#noir,#aide,#fil,.notes{display:none!important}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
@@ -265,6 +266,7 @@ body.presentateur{padding:0 0 24px}
   <div class="num">7 / 7</div>
   <aside class="notes" data-duree="20" data-titre="Conclusion"><p>Tout tourne déjà dans Microsoft Fabric : la collecte toutes les 10 minutes, les 8 critères, le modèle, l'optimisation. L'outil se lance en une commande.</p><p>Prochaine étape : un pilote de 5 stations et un mois de mesure.</p><p>Les voitures qui changent la ville, au bon endroit. Merci. Place à vos questions.</p></aside>
 </section>
+<div id="fil"></div>
 </div></div>
 <aside id="panneau-notes" aria-live="polite"><div class="entete" id="pn-titre"></div><div id="pn-texte"></div></aside>
 <div id="noir"></div>
@@ -275,7 +277,7 @@ document.documentElement.classList.add('js');
   var slides = Array.prototype.slice.call(document.querySelectorAll('#pont .slide'));
   var duree = slides.map(function(s){ var n = s.querySelector('.notes'); return n ? +(n.getAttribute('data-duree')||0) : 0; });
   var cur = -1, pres = null, t0 = null, pauseA = null, cumulPause = 0, minuteur = null;
-  var pont = document.getElementById('pont'), scene = document.getElementById('scene');
+  var pont = document.getElementById('pont'), scene = document.getElementById('scene'), fil = document.getElementById('fil');
 
   function ajuster(){
     var w = scene.clientWidth, h = scene.clientHeight, k = Math.min(w/1920, h/1080);
@@ -304,6 +306,7 @@ document.documentElement.classList.add('js');
     if (i === cur) return;
     if (cur >= 0) slides[cur].classList.remove('active');
     cur = i; slides[cur].classList.add('active');
+    fil.style.width = ((cur+1) / slides.length * 100) + '%';
     try { history.replaceState(null, '', '#' + (cur+1)); } catch(e) { location.hash = '#' + (cur+1); }
     majNotes(); synchro();
   }
